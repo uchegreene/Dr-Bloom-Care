@@ -7,12 +7,15 @@ import { useColors } from '@/hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { Calendar } from '@/components/Calendar';
 import { useRouter } from 'expo-router';
+import { HealthTipsCard } from '@/components/HealthTipsCard';
+import { PHASE_TIPS } from '@/constants/healthTips';
+import { isToday } from 'date-fns';
 
 export default function CycleScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
-  const { logs, getCyclePhase, getPredictedNextPeriod } = useCycle();
+  const { logs, getCyclePhase, getPredictedNextPeriod, getFertileWindow, logPeriodStart } = useCycle();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -20,7 +23,15 @@ export default function CycleScreen() {
   const todayStr = format(selectedDate, 'yyyy-MM-dd');
   const phase = getCyclePhase(todayStr);
   const nextPeriod = getPredictedNextPeriod();
+  const fertileWindow = getFertileWindow();
   const todayLog = logs[todayStr];
+
+  const selectedIsToday = isToday(selectedDate);
+  const tipGroup = PHASE_TIPS[phase] ?? PHASE_TIPS.Unknown;
+
+  const handleLogPeriodStart = () => {
+    logPeriodStart(todayStr);
+  };
 
   const getPhaseColor = (dateStr: string) => {
     const p = getCyclePhase(dateStr);
@@ -52,7 +63,23 @@ export default function CycleScreen() {
               Next period expected {format(nextPeriod, 'MMM d')}
             </Text>
           )}
+          {fertileWindow && (
+            <Text style={[styles.prediction, { color: colors.mutedForeground }]}>
+              Fertile window {format(fertileWindow.start, 'MMM d')} - {format(fertileWindow.end, 'MMM d')}
+            </Text>
+          )}
         </View>
+
+        <TouchableOpacity
+          style={[styles.periodStartButton, { backgroundColor: colors.primary }]}
+          activeOpacity={0.85}
+          onPress={handleLogPeriodStart}
+        >
+          <Feather name="droplet" size={18} color={colors.primaryForeground} />
+          <Text style={[styles.periodStartText, { color: colors.primaryForeground }]}>
+            {selectedIsToday ? 'Log period start today' : `Log period start on ${format(selectedDate, 'MMM d')}`}
+          </Text>
+        </TouchableOpacity>
 
         <View style={[styles.calendarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.calendarHeader}>
@@ -112,6 +139,14 @@ export default function CycleScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        <View style={styles.tipsContainer}>
+          <HealthTipsCard
+            group={tipGroup}
+            maxTips={3}
+            onSeeMore={() => router.push('/health-tips')}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -158,6 +193,26 @@ const styles = StyleSheet.create({
   prediction: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  periodStartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+  },
+  periodStartText: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 16,
+  },
+  tipsContainer: {
+    paddingHorizontal: 24,
+    marginTop: 24,
   },
   calendarContainer: {
     marginHorizontal: 24,

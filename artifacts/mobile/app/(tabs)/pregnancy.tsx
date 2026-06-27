@@ -7,6 +7,8 @@ import { usePregnancy } from '@/hooks/usePregnancyContext';
 import { Feather } from '@expo/vector-icons';
 import { format, parseISO, isValid, isFuture } from 'date-fns';
 import { useRouter } from 'expo-router';
+import { HealthTipsCard } from '@/components/HealthTipsCard';
+import { TRIMESTER_TIPS } from '@/constants/healthTips';
 
 const WEEKLY_NOTES: Record<number, string> = {
   4: 'Your baby is the size of a poppy seed. The neural tube, which becomes the brain and spine, is forming.',
@@ -141,6 +143,14 @@ export default function PregnancyScreen() {
           <Text style={[styles.infoCardText, { color: colors.foreground }]}>
             {getWeeklyNote(stats.week)}
           </Text>
+        </View>
+
+        <View style={{ marginTop: 24 }}>
+          <HealthTipsCard
+            group={TRIMESTER_TIPS[stats.trimester] ?? TRIMESTER_TIPS[1]}
+            maxTips={3}
+            onSeeMore={() => router.push('/health-tips')}
+          />
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24, marginBottom: 12 }]}>Pregnancy Log</Text>

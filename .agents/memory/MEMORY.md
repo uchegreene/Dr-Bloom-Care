@@ -1,1 +1,2 @@
 - [Expo context files need .tsx](expo-jsx-context-files.md) — hook/context files that render a JSX Provider must be `.tsx`, not `.ts`, or tsc fails to parse.
+- [Cycle period-start anchoring](cycle-period-anchor.md) — phase/prediction math anchors on the START of the latest consecutive flow run, never the latest logged flow day.
