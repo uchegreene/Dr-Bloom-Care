@@ -1,6 +1,6 @@
-# Bloom
+# HER BLOOM
 
-A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, a pregnancy tracker, a community feed, and 1:1 chat. Frontend-only with AsyncStorage persistence.
+A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, a pregnancy tracker, a community feed, and 1:1 chat. Frontend-only with AsyncStorage persistence. Onboarding registers users with full name and date of birth (DOB stored as `YYYY-MM-DD`, validated for age 13–120).
 
 ## Run & Operate
 

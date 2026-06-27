@@ -59,7 +59,7 @@ export default function ProfileScreen() {
             {(name || 'B').charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={[styles.avatarName, { color: colors.foreground }]}>{name || 'Bloom Member'}</Text>
+        <Text style={[styles.avatarName, { color: colors.foreground }]}>{name || 'HER BLOOM Member'}</Text>
       </View>
 
       <View style={styles.statsRow}>

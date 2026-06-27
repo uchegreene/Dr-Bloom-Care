@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { parseISO, isValid, isFuture, differenceInYears } from 'date-fns';
 import { useColors } from '@/hooks/useColors';
 import { useProfile } from '@/hooks/useProfileContext';
 
@@ -12,64 +13,122 @@ export default function Onboarding() {
   const { completeOnboarding } = useProfile();
 
   const [name, setName] = useState('');
+  const [dob, setDob] = useState('');
   const [mode, setMode] = useState<'cycle' | 'pregnant' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const validate = (): boolean => {
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return false;
+    }
+    const parsed = parseISO(dob);
+    if (!dob.trim() || !isValid(parsed)) {
+      setError('Please enter your date of birth as YYYY-MM-DD.');
+      return false;
+    }
+    if (isFuture(parsed)) {
+      setError('Date of birth cannot be in the future.');
+      return false;
+    }
+    const age = differenceInYears(new Date(), parsed);
+    if (age < 13) {
+      setError('You must be at least 13 years old to use HER BLOOM.');
+      return false;
+    }
+    if (age > 120) {
+      setError('Please enter a valid date of birth.');
+      return false;
+    }
+    if (!mode) {
+      setError('Please choose what you would like to track.');
+      return false;
+    }
+    setError(null);
+    return true;
+  };
 
   const handleComplete = async () => {
-    if (!name.trim() || !mode) return;
-    await completeOnboarding({ name: name.trim(), mode, bio: '' });
+    if (!validate() || !mode) return;
+    await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '' });
     router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
   };
 
+  const canSubmit = !!name.trim() && !!dob.trim() && !!mode;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Welcome to Bloom</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>A safe, warm place for your body and your journey.</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: (Platform.OS === 'web' ? 48 : insets.top) + 24, paddingBottom: (Platform.OS === 'web' ? 48 : insets.bottom) + 24 },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={[styles.title, { color: colors.foreground }]}>Welcome to HER BLOOM</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>A safe, warm place for your body and your journey. Let's set up your account.</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.foreground }]}>What should we call you?</Text>
-          <TextInput
-            style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-            placeholder="Your name"
-            placeholderTextColor={colors.mutedForeground}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
+      <View style={styles.inputContainer}>
+        <Text style={[styles.label, { color: colors.foreground }]}>Full name</Text>
+        <TextInput
+          style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+          placeholder="Your full name"
+          placeholderTextColor={colors.mutedForeground}
+          value={name}
+          onChangeText={(t) => { setName(t); if (error) setError(null); }}
+          autoCapitalize="words"
+        />
+      </View>
 
-        <Text style={[styles.label, { color: colors.foreground }]}>What are you tracking?</Text>
-        <View style={styles.modeContainer}>
-          <TouchableOpacity
-            style={[
-              styles.modeButton,
-              { borderColor: mode === 'cycle' ? colors.primary : colors.border, backgroundColor: mode === 'cycle' ? colors.secondary : colors.card }
-            ]}
-            onPress={() => setMode('cycle')}
-          >
-            <Text style={[styles.modeText, { color: mode === 'cycle' ? colors.primary : colors.foreground }]}>My Cycle</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.modeButton,
-              { borderColor: mode === 'pregnant' ? colors.primary : colors.border, backgroundColor: mode === 'pregnant' ? colors.secondary : colors.card }
-            ]}
-            onPress={() => setMode('pregnant')}
-          >
-            <Text style={[styles.modeText, { color: mode === 'pregnant' ? colors.primary : colors.foreground }]}>My Pregnancy</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.inputContainer}>
+        <Text style={[styles.label, { color: colors.foreground }]}>Date of birth</Text>
+        <TextInput
+          style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.mutedForeground}
+          value={dob}
+          onChangeText={(t) => { setDob(t); if (error) setError(null); }}
+          keyboardType="numbers-and-punctuation"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
 
-        <View style={styles.spacer} />
-
+      <Text style={[styles.label, { color: colors.foreground }]}>What are you tracking?</Text>
+      <View style={styles.modeContainer}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: name.trim() && mode ? colors.primary : colors.muted }]}
-          disabled={!name.trim() || !mode}
-          onPress={handleComplete}
+          style={[
+            styles.modeButton,
+            { borderColor: mode === 'cycle' ? colors.primary : colors.border, backgroundColor: mode === 'cycle' ? colors.secondary : colors.card }
+          ]}
+          onPress={() => { setMode('cycle'); if (error) setError(null); }}
         >
-          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Begin Journey</Text>
+          <Text style={[styles.modeText, { color: mode === 'cycle' ? colors.primary : colors.foreground }]}>My Cycle</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.modeButton,
+            { borderColor: mode === 'pregnant' ? colors.primary : colors.border, backgroundColor: mode === 'pregnant' ? colors.secondary : colors.card }
+          ]}
+          onPress={() => { setMode('pregnant'); if (error) setError(null); }}
+        >
+          <Text style={[styles.modeText, { color: mode === 'pregnant' ? colors.primary : colors.foreground }]}>My Pregnancy</Text>
         </TouchableOpacity>
       </View>
-    </View>
+
+      {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
+
+      <View style={styles.spacer} />
+
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: canSubmit ? colors.primary : colors.muted }]}
+        onPress={handleComplete}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Begin Journey</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
@@ -78,7 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },
@@ -90,11 +149,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 24,
   },
   inputContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   label: {
     fontFamily: 'Nunito_600SemiBold',
@@ -123,8 +182,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_600SemiBold',
     fontSize: 16,
   },
+  error: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 14,
+    marginTop: 16,
+  },
   spacer: {
-    flex: 1,
+    height: 32,
   },
   button: {
     borderRadius: 30,

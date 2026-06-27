@@ -5,6 +5,7 @@ export type ProfileMode = 'cycle' | 'pregnant' | 'none';
 
 export interface Profile {
   name: string;
+  dateOfBirth: string;
   bio: string;
   mode: ProfileMode;
 }
