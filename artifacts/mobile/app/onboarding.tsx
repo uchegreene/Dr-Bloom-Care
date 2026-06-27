@@ -17,7 +17,7 @@ export default function Onboarding() {
   const handleComplete = async () => {
     if (!name.trim() || !mode) return;
     await completeOnboarding({ name: name.trim(), mode, bio: '' });
-    router.replace('/');
+    router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
   };
 
   return (
