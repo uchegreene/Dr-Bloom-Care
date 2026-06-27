@@ -1,7 +1,5 @@
 import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
@@ -9,36 +7,6 @@ import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { useProfile } from "@/hooks/useProfileContext";
-
-function NativeTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone: boolean }) {
-  return (
-    <NativeTabs>
-      {isNone ? null : !isPregnant ? (
-        <NativeTabs.Trigger name="cycle">
-          <Icon sf={{ default: "calendar", selected: "calendar" }} />
-          <Label>Cycle</Label>
-        </NativeTabs.Trigger>
-      ) : (
-        <NativeTabs.Trigger name="pregnancy">
-          <Icon sf={{ default: "heart", selected: "heart.fill" }} />
-          <Label>Pregnancy</Label>
-        </NativeTabs.Trigger>
-      )}
-      <NativeTabs.Trigger name="community">
-        <Icon sf={{ default: "person.3", selected: "person.3.fill" }} />
-        <Label>Community</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat">
-        <Icon sf={{ default: "message", selected: "message.fill" }} />
-        <Label>Chat</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
 
 function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone: boolean }) {
   const colors = useColors();
@@ -156,8 +124,5 @@ export default function TabLayout() {
   const isPregnant = profile?.mode === "pregnant";
   const isNone = profile?.mode === "none";
 
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout isPregnant={isPregnant} isNone={isNone} />;
-  }
   return <ClassicTabLayout isPregnant={isPregnant} isNone={isNone} />;
 }
