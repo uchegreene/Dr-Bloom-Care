@@ -1,0 +1,1 @@
+- [Expo context files need .tsx](expo-jsx-context-files.md) — hook/context files that render a JSX Provider must be `.tsx`, not `.ts`, or tsc fails to parse.

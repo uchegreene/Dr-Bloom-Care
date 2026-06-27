@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "O6C-c5tgMbKgfw_0cup8i"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "bloom app icon"
+
+[[generated]]
+id = "EntdvHfvNrB7_p9LkFjv2"
+uri = "file://artifacts/mobile/assets/images/pregnancy-banner.png"
+type = "image"
+title = "pregnancy journey banner"
+
+[[generated]]
+id = "5yigTCByYnlXNyE3tiL7H"
+uri = "file://artifacts/mobile/assets/images/community-banner.png"
+type = "image"
+title = "community banner"
