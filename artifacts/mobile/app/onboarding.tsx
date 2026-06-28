@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, Keyboard, Alert } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -42,39 +42,26 @@ export default function Onboarding() {
   const price = PLAN_PRICES[plan];
   const planName = mode === 'pregnant' ? 'Pregnancy Tracking' : 'Cycle Tracking';
 
-  const validateDetails = (): boolean => {
-    if (!name.trim()) {
-      setError('Please enter your full name.');
-      return false;
-    }
+  const validateDetails = (): string | null => {
+    if (!name.trim()) return 'Please enter your full name.';
     const parsed = parseISO(dob);
-    if (!dob.trim() || !isValid(parsed)) {
-      setError('Please enter your date of birth as YYYY-MM-DD.');
-      return false;
-    }
-    if (isFuture(parsed)) {
-      setError('Date of birth cannot be in the future.');
-      return false;
-    }
+    if (!dob.trim() || !isValid(parsed)) return 'Please enter your date of birth as YYYY-MM-DD.';
+    if (isFuture(parsed)) return 'Date of birth cannot be in the future.';
     const age = differenceInYears(new Date(), parsed);
-    if (age < 13) {
-      setError('You must be at least 13 years old to use HER BLOOM.');
-      return false;
-    }
-    if (age > 120) {
-      setError('Please enter a valid date of birth.');
-      return false;
-    }
-    if (!mode) {
-      setError('Please choose what you would like to track.');
-      return false;
-    }
-    setError(null);
-    return true;
+    if (age < 13) return 'You must be at least 13 years old to use HER BLOOM.';
+    if (age > 120) return 'Please enter a valid date of birth.';
+    if (!mode) return 'Please choose what you would like to track.';
+    return null;
   };
 
   const handleContinue = () => {
-    if (!validateDetails()) return;
+    Keyboard.dismiss();
+    const err = validateDetails();
+    if (err) {
+      setError(err);
+      Alert.alert('Almost there', err);
+      return;
+    }
     setError(null);
     setStep(2);
   };
@@ -93,36 +80,30 @@ export default function Onboarding() {
     if (error) setError(null);
   };
 
-  const validateCard = (): boolean => {
+  const validateCard = (): string | null => {
     const digits = cardNumber.replace(/\D/g, '');
-    if (!cardName.trim()) {
-      setError('Please enter the name on your card.');
-      return false;
-    }
-    if (digits.length < 13) {
-      setError('Please enter a valid card number.');
-      return false;
-    }
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      setError('Please enter the expiry as MM/YY.');
-      return false;
-    }
+    if (!cardName.trim()) return 'Please enter the name on your card.';
+    if (digits.length < 13) return 'Please enter a valid card number.';
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) return 'Please enter the expiry as MM/YY.';
     const month = parseInt(expiry.slice(0, 2), 10);
-    if (month < 1 || month > 12) {
-      setError('Please enter a valid expiry month.');
-      return false;
-    }
-    if (!/^\d{3,4}$/.test(cvv)) {
-      setError('Please enter a valid CVV.');
-      return false;
-    }
-    setError(null);
-    return true;
+    if (month < 1 || month > 12) return 'Please enter a valid expiry month.';
+    if (!/^\d{3,4}$/.test(cvv)) return 'Please enter a valid CVV.';
+    return null;
   };
 
   const handleSubscribe = async () => {
     Keyboard.dismiss();
-    if (!mode || !validateCard()) return;
+    if (!mode) {
+      setStep(1);
+      return;
+    }
+    const err = validateCard();
+    if (err) {
+      setError(err);
+      Alert.alert('Check your card details', err);
+      return;
+    }
+    setError(null);
     const digits = cardNumber.replace(/\D/g, '');
     const subscription: Subscription = {
       plan,
@@ -137,7 +118,9 @@ export default function Onboarding() {
       await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
       router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
     } catch {
-      setError('Something went wrong setting up your account. Please try again.');
+      const msg = 'We could not set up your account. Please try again.';
+      setError(msg);
+      Alert.alert('Something went wrong', msg);
     }
   };
 
@@ -214,16 +197,6 @@ export default function Onboarding() {
           </View>
 
           {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
-
-          <View style={styles.spacer} />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: detailsValid ? colors.primary : colors.muted }]}
-            onPress={handleContinue}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Continue</Text>
-          </TouchableOpacity>
         </>
       ) : (
         <>
@@ -319,19 +292,37 @@ export default function Onboarding() {
           </View>
 
           {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
-
-          <View style={styles.spacer} />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary }]}
-            onPress={handleSubscribe}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Subscribe &amp; Begin Journey</Text>
-          </TouchableOpacity>
         </>
       )}
     </ScrollView>
+    <View
+      style={[
+        styles.footer,
+        {
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
+          paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 12,
+        },
+      ]}
+    >
+      {step === 1 ? (
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: detailsValid ? colors.primary : colors.muted }]}
+          onPress={handleContinue}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Continue</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary }]}
+          onPress={handleSubscribe}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Subscribe &amp; Begin Journey</Text>
+        </TouchableOpacity>
+      )}
+    </View>
     </KeyboardAvoidingView>
   );
 }
@@ -344,6 +335,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
   title: {
     fontFamily: 'Nunito_700Bold',
