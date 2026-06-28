@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { parseISO, isValid, isFuture, differenceInYears } from 'date-fns';
@@ -120,6 +120,7 @@ export default function Onboarding() {
   };
 
   const handleSubscribe = async () => {
+    Keyboard.dismiss();
     if (!mode || !validateCard()) return;
     const digits = cardNumber.replace(/\D/g, '');
     const subscription: Subscription = {
@@ -131,20 +132,29 @@ export default function Onboarding() {
       startedAt: new Date().toISOString(),
       status: 'active',
     };
-    await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
-    router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
+    try {
+      await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
+      router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
+    } catch {
+      setError('Something went wrong setting up your account. Please try again.');
+    }
   };
 
   const detailsValid = !!name.trim() && !!dob.trim() && !!mode;
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={[
         styles.content,
         { paddingTop: (Platform.OS === 'web' ? 48 : insets.top) + 24, paddingBottom: (Platform.OS === 'web' ? 48 : insets.bottom) + 24 },
       ]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
     >
       {step === 1 ? (
@@ -321,6 +331,7 @@ export default function Onboarding() {
         </>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
