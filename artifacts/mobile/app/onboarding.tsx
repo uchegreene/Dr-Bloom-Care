@@ -116,11 +116,11 @@ export default function Onboarding() {
     };
     try {
       await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
-      router.replace(mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle');
-    } catch {
-      const msg = 'We could not set up your account. Please try again.';
-      setError(msg);
-      Alert.alert('Something went wrong', msg);
+      router.replace('/');
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      setError(detail);
+      Alert.alert('Something went wrong', detail);
     }
   };
 
@@ -197,6 +197,16 @@ export default function Onboarding() {
           </View>
 
           {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
+
+          <View style={styles.spacer} />
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: detailsValid ? colors.primary : colors.muted }]}
+            onPress={handleContinue}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Continue</Text>
+          </TouchableOpacity>
         </>
       ) : (
         <>
@@ -292,37 +302,19 @@ export default function Onboarding() {
           </View>
 
           {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
+
+          <View style={styles.spacer} />
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            onPress={handleSubscribe}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Subscribe &amp; Begin Journey</Text>
+          </TouchableOpacity>
         </>
       )}
     </ScrollView>
-    <View
-      style={[
-        styles.footer,
-        {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 12,
-        },
-      ]}
-    >
-      {step === 1 ? (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: detailsValid ? colors.primary : colors.muted }]}
-          onPress={handleContinue}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Continue</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={handleSubscribe}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Subscribe &amp; Begin Journey</Text>
-        </TouchableOpacity>
-      )}
-    </View>
     </KeyboardAvoidingView>
   );
 }
@@ -335,11 +327,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
   },
   title: {
     fontFamily: 'Nunito_700Bold',
