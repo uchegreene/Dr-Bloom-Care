@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, KeyboardAvoidingView, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, Keyboard } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { parseISO, isValid, isFuture, differenceInYears } from 'date-fns';
@@ -144,8 +145,8 @@ export default function Onboarding() {
 
   return (
     <KeyboardAvoidingView
+      behavior="padding"
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
     <ScrollView
       style={styles.container}
