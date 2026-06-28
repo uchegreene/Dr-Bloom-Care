@@ -6,12 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocial } from '@/hooks/useSocialContext';
 import { useRouter } from 'expo-router';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { Feather } from '@expo/vector-icons';
 
 const TAGS = ['Journey', 'Advice', 'Health'];
 
@@ -23,13 +26,29 @@ export default function PostCreate() {
 
   const [text, setText] = useState('');
   const [tag, setTag] = useState<string | undefined>(undefined);
+  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
 
   const topInset = Platform.OS === 'web' ? 20 : insets.top;
 
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch {
+      // Image picking is unavailable in this environment; ignore silently.
+    }
+  };
+
   const handlePost = async () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    await addPost(trimmed, tag);
+    if (!trimmed && !imageUri) return;
+    await addPost(trimmed, tag, imageUri);
     router.back();
   };
 
@@ -45,10 +64,10 @@ export default function PostCreate() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Post</Text>
         <TouchableOpacity
           onPress={handlePost}
-          disabled={!text.trim()}
+          disabled={!text.trim() && !imageUri}
           hitSlop={8}
         >
-          <Text style={[styles.post, { color: text.trim() ? colors.primary : colors.mutedForeground }]}>
+          <Text style={[styles.post, { color: text.trim() || imageUri ? colors.primary : colors.mutedForeground }]}>
             Post
           </Text>
         </TouchableOpacity>
@@ -64,6 +83,28 @@ export default function PostCreate() {
           autoFocus
           style={[styles.input, { color: colors.foreground }]}
         />
+
+        {imageUri ? (
+          <View style={styles.previewWrap}>
+            <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
+            <TouchableOpacity
+              style={[styles.removeImage, { backgroundColor: colors.background }]}
+              onPress={() => setImageUri(undefined)}
+              hitSlop={8}
+            >
+              <Feather name="x" size={18} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+            onPress={pickImage}
+            activeOpacity={0.8}
+          >
+            <Feather name="image" size={20} color={colors.primary} />
+            <Text style={[styles.photoBtnText, { color: colors.foreground }]}>Add a photo</Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={[styles.tagLabel, { color: colors.mutedForeground }]}>Add a topic (optional)</Text>
         <View style={styles.tagRow}>
@@ -125,6 +166,41 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     minHeight: 140,
     textAlignVertical: 'top',
+  },
+  photoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 20,
+  },
+  photoBtnText: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 15,
+  },
+  previewWrap: {
+    marginTop: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  preview: {
+    width: '100%',
+    height: 220,
+  },
+  removeImage: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.92,
   },
   tagLabel: {
     fontFamily: 'Nunito_600SemiBold',

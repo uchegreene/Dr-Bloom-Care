@@ -54,7 +54,11 @@ function PostCard({ post }: { post: Post }) {
         )}
       </View>
 
-      <Text style={[styles.body, { color: colors.foreground }]}>{post.text}</Text>
+      {post.text ? <Text style={[styles.body, { color: colors.foreground }]}>{post.text}</Text> : null}
+
+      {post.imageUri ? (
+        <Image source={{ uri: post.imageUri }} style={styles.postImage} contentFit="cover" />
+      ) : null}
 
       <View style={styles.cardFooter}>
         <TouchableOpacity style={styles.action} onPress={handleLike} activeOpacity={0.6}>
@@ -255,6 +259,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
     lineHeight: 24,
+    marginBottom: 16,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 14,
     marginBottom: 16,
   },
   cardFooter: {

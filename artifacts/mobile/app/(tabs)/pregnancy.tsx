@@ -145,6 +145,23 @@ export default function PregnancyScreen() {
           </Text>
         </View>
 
+        <TouchableOpacity
+          style={[styles.reminderCard, { backgroundColor: colors.secondary }]}
+          activeOpacity={0.85}
+          onPress={() => router.push('/reminders')}
+        >
+          <View style={[styles.reminderIcon, { backgroundColor: colors.card }]}>
+            <Feather name="bell" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.reminderTitle, { color: colors.foreground }]}>Appointments & Medication</Text>
+            <Text style={[styles.reminderSubtitle, { color: colors.mutedForeground }]}>
+              Set alerts for checkups and daily medication reminders
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={22} color={colors.mutedForeground} />
+        </TouchableOpacity>
+
         <View style={{ marginTop: 24 }}>
           <HealthTipsCard
             group={TRIMESTER_TIPS[stats.trimester] ?? TRIMESTER_TIPS[1]}
@@ -267,6 +284,30 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 20,
     borderWidth: 1,
+  },
+  reminderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 20,
+    marginTop: 16,
+  },
+  reminderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reminderTitle: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 16,
+  },
+  reminderSubtitle: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 13,
+    marginTop: 2,
   },
   infoCardTitle: {
     fontFamily: 'Nunito_700Bold',

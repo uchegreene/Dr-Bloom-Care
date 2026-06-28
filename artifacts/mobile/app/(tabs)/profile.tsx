@@ -7,12 +7,15 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  Switch,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile, ProfileMode } from '@/hooks/useProfileContext';
 import { useSocial } from '@/hooks/useSocialContext';
 import { Feather } from '@expo/vector-icons';
+
+const formatNaira = (n: number) => '\u20A6' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 const MODES: { key: ProfileMode; label: string; icon: keyof typeof Feather.glyphMap; desc: string }[] = [
   { key: 'cycle', label: 'Cycle Tracking', icon: 'calendar', desc: 'Track your period and symptoms' },
@@ -23,8 +26,9 @@ const MODES: { key: ProfileMode; label: string; icon: keyof typeof Feather.glyph
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, updateSubscription } = useProfile();
   const { posts } = useSocial();
+  const subscription = profile?.subscription;
 
   const [name, setName] = useState(profile?.name ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
@@ -74,6 +78,78 @@ export default function ProfileScreen() {
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Mode</Text>
         </View>
       </View>
+
+      {subscription && (
+        <>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Membership</Text>
+          <View style={[styles.subCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.subHeader}>
+              <View style={[styles.subIcon, { backgroundColor: colors.secondary }]}>
+                <Feather name="award" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.subPlan, { color: colors.foreground }]}>
+                  {subscription.plan === 'pregnancy' ? 'Pregnancy Tracking' : 'Cycle Tracking'}
+                </Text>
+                <Text style={[styles.subPrice, { color: colors.mutedForeground }]}>
+                  {formatNaira(subscription.priceNaira)} / month
+                </Text>
+              </View>
+              <View style={[styles.subBadge, { backgroundColor: subscription.status === 'active' ? colors.accent : colors.muted }]}>
+                <Text style={styles.subBadgeText}>
+                  {subscription.status === 'active' ? 'Active' : 'Canceled'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.subDivider, { backgroundColor: colors.border }]} />
+
+            <View style={styles.subRow}>
+              <Feather name="credit-card" size={16} color={colors.mutedForeground} />
+              <Text style={[styles.subRowText, { color: colors.foreground }]}>
+                {subscription.cardBrand} ending in {subscription.cardLast4}
+              </Text>
+            </View>
+
+            <View style={[styles.renewRow]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.renewTitle, { color: colors.foreground }]}>Auto-renew monthly</Text>
+                <Text style={[styles.renewDesc, { color: colors.mutedForeground }]}>
+                  {subscription.autoRenew ? 'Your plan renews automatically.' : 'Your plan will not renew.'}
+                </Text>
+              </View>
+              <Switch
+                value={subscription.autoRenew}
+                onValueChange={(v) => updateSubscription({ autoRenew: v })}
+                trackColor={{ true: colors.primary, false: colors.border }}
+                thumbColor={colors.card}
+              />
+            </View>
+
+            {subscription.status === 'active' ? (
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                onPress={() => updateSubscription({ status: 'canceled', autoRenew: false })}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.destructive }]}>Cancel membership</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                onPress={() => updateSubscription({ status: 'active', autoRenew: true })}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.primary }]}>Reactivate membership</Text>
+              </TouchableOpacity>
+            )}
+
+            <Text style={[styles.subNote, { color: colors.mutedForeground }]}>
+              Demo only. No real payment is taken.
+            </Text>
+          </View>
+        </>
+      )}
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About You</Text>
       <Text style={[styles.label, { color: colors.mutedForeground }]}>Name</Text>
@@ -192,6 +268,88 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_700Bold',
     fontSize: 20,
     marginBottom: 12,
+  },
+  subCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 28,
+  },
+  subHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  subIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subPlan: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 16,
+  },
+  subPrice: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  subBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  subBadgeText: {
+    color: '#fff',
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 12,
+  },
+  subDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 14,
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  subRowText: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 14,
+  },
+  renewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  renewTitle: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 15,
+  },
+  renewDesc: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  cancelBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  cancelBtnText: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 15,
+  },
+  subNote: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
   },
   label: {
     fontFamily: 'Nunito_600SemiBold',

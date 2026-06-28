@@ -28,7 +28,19 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow HER BLOOM to access your photos so you can add them to your community posts."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E8729A"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

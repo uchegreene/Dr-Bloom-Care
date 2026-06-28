@@ -54,6 +54,8 @@ A warm, supportive Expo (React Native) mobile app for women, mothers, and mother
 - Context provider files must use the `.tsx` extension (they contain JSX).
 - Verify the mobile app with `pnpm --filter @workspace/mobile run typecheck`, not `build`.
 - Dates: validate user-entered dates with `isValid`/`isFuture` before persisting — `parseISO` on a malformed string yields an Invalid Date that later throws in `format`.
+- expo-router typed routes: after adding a new screen/route, `typecheck` fails with TS2322/TS2345 "not assignable" on the new path until the route types regenerate. Restart the `artifacts/mobile: expo` workflow (which regenerates `.expo/types`), then re-run typecheck.
+- Pregnancy-chance estimate derives from the last *unprotected* intimacy log (`getLastUnprotectedSex`), not the most recent log overall — a later protected entry must never mask earlier unprotected risk.
 
 ## Pointers
 

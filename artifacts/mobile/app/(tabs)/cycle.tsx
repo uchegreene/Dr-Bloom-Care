@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { Calendar } from '@/components/Calendar';
 import { useRouter } from 'expo-router';
 import { HealthTipsCard } from '@/components/HealthTipsCard';
+import { CycleInsights } from '@/components/CycleInsights';
 import { PHASE_TIPS } from '@/constants/healthTips';
 import { isToday } from 'date-fns';
 
@@ -15,7 +16,7 @@ export default function CycleScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
-  const { logs, getCyclePhase, getPredictedNextPeriod, getFertileWindow, logPeriodStart } = useCycle();
+  const { logs, intimacyLogs, getCyclePhase, getPredictedNextPeriod, getFertileWindow, logPeriodStart } = useCycle();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -81,6 +82,19 @@ export default function CycleScreen() {
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.intimacyButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+          activeOpacity={0.85}
+          onPress={() => router.push({ pathname: '/cycle-intimacy', params: { date: todayStr } })}
+        >
+          <Feather name="heart" size={18} color={colors.primary} />
+          <Text style={[styles.intimacyButtonText, { color: colors.foreground }]}>
+            {intimacyLogs[todayStr]
+              ? `Intimacy logged ${selectedIsToday ? 'today' : `on ${format(selectedDate, 'MMM d')}`} (edit)`
+              : selectedIsToday ? 'Log intimacy today' : `Log intimacy on ${format(selectedDate, 'MMM d')}`}
+          </Text>
+        </TouchableOpacity>
+
         <View style={[styles.calendarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.calendarHeader}>
             <TouchableOpacity onPress={() => setCurrentDate(subMonths(currentDate, 1))}>
@@ -138,6 +152,10 @@ export default function CycleScreen() {
               <Text style={[styles.emptyLogText, { color: colors.mutedForeground }]}>Log flow, symptoms, and mood</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        <View style={styles.insightsContainer}>
+          <CycleInsights />
         </View>
 
         <View style={styles.tipsContainer}>
@@ -209,6 +227,25 @@ const styles = StyleSheet.create({
   periodStartText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 16,
+  },
+  intimacyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  intimacyButtonText: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 16,
+  },
+  insightsContainer: {
+    paddingHorizontal: 24,
+    marginTop: 24,
   },
   tipsContainer: {
     paddingHorizontal: 24,

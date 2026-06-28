@@ -15,6 +15,7 @@ export interface Post {
   authorId: string;
   text: string;
   tag?: string;
+  imageUri?: string;
   likes: number;
   liked: boolean;
   comments: Comment[];
@@ -24,7 +25,7 @@ export interface Post {
 interface SocialContextType {
   posts: Post[];
   isLoading: boolean;
-  addPost: (text: string, tag?: string) => Promise<void>;
+  addPost: (text: string, tag?: string, imageUri?: string) => Promise<void>;
   likePost: (id: string) => Promise<void>;
   addComment: (postId: string, text: string) => Promise<void>;
 }
@@ -114,13 +115,14 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem('bloom_posts_v2', JSON.stringify(updated));
   };
 
-  const addPost = async (text: string, tag?: string) => {
+  const addPost = async (text: string, tag?: string, imageUri?: string) => {
     const newPost: Post = {
       id: Date.now().toString(),
       authorName: 'You',
       authorId: 'me',
       text,
       tag,
+      imageUri,
       likes: 0,
       liked: false,
       comments: [],

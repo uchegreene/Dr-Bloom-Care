@@ -27,7 +27,9 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="cycle-log" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="cycle-intimacy" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="pregnancy-log" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="reminders" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />

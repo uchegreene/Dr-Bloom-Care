@@ -7,14 +7,15 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocial } from '@/hooks/useSocialContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
 
 export default function PostDetail() {
@@ -78,7 +79,11 @@ export default function PostDetail() {
           )}
         </View>
 
-        <Text style={[styles.body, { color: colors.foreground }]}>{post.text}</Text>
+        {post.text ? <Text style={[styles.body, { color: colors.foreground }]}>{post.text}</Text> : null}
+
+        {post.imageUri ? (
+          <Image source={{ uri: post.imageUri }} style={styles.postImage} contentFit="cover" />
+        ) : null}
 
         <TouchableOpacity style={styles.likeRow} onPress={handleLike} activeOpacity={0.6}>
           <Feather name="heart" size={20} color={post.liked ? colors.primary : colors.mutedForeground} />
@@ -189,6 +194,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
     fontSize: 17,
     lineHeight: 26,
+  },
+  postImage: {
+    width: '100%',
+    height: 240,
+    borderRadius: 16,
+    marginTop: 16,
   },
   likeRow: {
     flexDirection: 'row',
