@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, Keyboard, Alert } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { parseISO, isValid, isFuture, differenceInYears } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -21,7 +21,6 @@ const detectBrand = (digits: string): string => {
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const router = useRouter();
   const { completeOnboarding } = useProfile();
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -38,6 +37,7 @@ export default function Onboarding() {
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   const plan: SubscriptionPlan = mode === 'pregnant' ? 'pregnancy' : 'cycle';
   const price = PLAN_PRICES[plan];
@@ -118,8 +118,7 @@ export default function Onboarding() {
     };
     try {
       await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
-      const target = mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle';
-      setTimeout(() => router.replace(target), 0);
+      setDone(true);
     } catch (e) {
       setSubmitting(false);
       const detail = e instanceof Error ? e.message : String(e);
@@ -129,6 +128,10 @@ export default function Onboarding() {
   };
 
   const detailsValid = !!name.trim() && !!dob.trim() && !!mode;
+
+  if (done) {
+    return <Redirect href={mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle'} />;
+  }
 
   return (
     <KeyboardAvoidingView

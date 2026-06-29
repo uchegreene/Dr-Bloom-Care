@@ -19,16 +19,19 @@ fixes were tried and none were the cause.
 - Therefore the original `Subscribe` failure was never a tap/keyboard problem: the
   tap registered but logic inside the handler failed silently.
 
-**Root cause of the silent Subscribe failure:** `router.replace(...)` issued in the
-same tick as the `setProfile` inside `completeOnboarding` is SWALLOWED on a real
-device (works on web). `setProfile` re-renders every screen that reads the profile
-(index redirect, tab layout), and a navigation fired during that re-render is
-dropped — so the button appears to do nothing, with no popup and no error. Two
-different replace targets both failed identically, which is the tell.
+**Root cause of the silent Subscribe failure:** imperative `router.replace(...)`
+called from the onboarding handler silently no-ops on a real device (works on web).
+It fails with no popup and no error; two different replace targets AND a
+`setTimeout(..., 0)` deferral all failed identically — that combination is the tell
+that the imperative router call itself is the problem, not timing or the target.
 
-**Fix:** defer the navigation to the next tick — `setTimeout(() => router.replace(target), 0)`
-— so the profile state update commits before navigating. Navigate directly to the
-resolved tab (`/(tabs)/cycle` | `/(tabs)/pregnancy`), not through the `/` index hop.
+**Fix that worked:** use the DECLARATIVE `<Redirect href=... />` component instead.
+Set a `done` state in the success path (`setDone(true)` after `completeOnboarding`),
+then early-return `<Redirect href={mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle'} />`.
+**Why:** `<Redirect>` is the one navigation primitive proven to work on this device —
+it is how `app/index.tsx` routes to `/onboarding` in the first place. Prefer
+declarative `<Redirect>` over imperative `router.replace`/`router.push` for
+post-state-change navigation in this app.
 
 **How to apply:**
 - Keep action buttons as the last child INSIDE the `ScrollView`; keep
