@@ -19,10 +19,16 @@ fixes were tried and none were the cause.
 - Therefore the original `Subscribe` failure was never a tap/keyboard problem: the
   tap registered but logic inside the handler failed silently.
 
-**Root cause of the silent Subscribe failure:** a direct group-route jump
-(`router.replace('/(tabs)/cycle' | '/(tabs)/pregnancy')`) right after async
-`completeOnboarding` could no-op on device while working on web. Validation errors
-were also only shown as easily-missed inline text.
+**Root cause of the silent Subscribe failure:** `router.replace(...)` issued in the
+same tick as the `setProfile` inside `completeOnboarding` is SWALLOWED on a real
+device (works on web). `setProfile` re-renders every screen that reads the profile
+(index redirect, tab layout), and a navigation fired during that re-render is
+dropped — so the button appears to do nothing, with no popup and no error. Two
+different replace targets both failed identically, which is the tell.
+
+**Fix:** defer the navigation to the next tick — `setTimeout(() => router.replace(target), 0)`
+— so the profile state update commits before navigating. Navigate directly to the
+resolved tab (`/(tabs)/cycle` | `/(tabs)/pregnancy`), not through the `/` index hop.
 
 **How to apply:**
 - Keep action buttons as the last child INSIDE the `ScrollView`; keep

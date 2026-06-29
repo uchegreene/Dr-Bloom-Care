@@ -37,6 +37,7 @@ export default function Onboarding() {
   const [autoRenew, setAutoRenew] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const plan: SubscriptionPlan = mode === 'pregnant' ? 'pregnancy' : 'cycle';
   const price = PLAN_PRICES[plan];
@@ -104,6 +105,7 @@ export default function Onboarding() {
       return;
     }
     setError(null);
+    setSubmitting(true);
     const digits = cardNumber.replace(/\D/g, '');
     const subscription: Subscription = {
       plan,
@@ -116,8 +118,10 @@ export default function Onboarding() {
     };
     try {
       await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
-      router.replace('/');
+      const target = mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle';
+      setTimeout(() => router.replace(target), 0);
     } catch (e) {
+      setSubmitting(false);
       const detail = e instanceof Error ? e.message : String(e);
       setError(detail);
       Alert.alert('Something went wrong', detail);
@@ -306,11 +310,12 @@ export default function Onboarding() {
           <View style={styles.spacer} />
 
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            style={[styles.button, { backgroundColor: colors.primary, opacity: submitting ? 0.7 : 1 }]}
             onPress={handleSubscribe}
             activeOpacity={0.85}
+            disabled={submitting}
           >
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Subscribe &amp; Begin Journey</Text>
+            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{submitting ? 'Setting up...' : 'Subscribe & Begin Journey'}</Text>
           </TouchableOpacity>
         </>
       )}
