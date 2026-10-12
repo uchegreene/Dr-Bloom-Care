@@ -17,10 +17,14 @@
       "supportsTablet": false
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
       "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       [

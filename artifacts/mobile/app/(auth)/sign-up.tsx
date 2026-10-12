@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -72,9 +73,8 @@ export default function SignUpScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={[styles.mark, { backgroundColor: colors.secondary }]}>
-        <Text style={[styles.markText, { color: colors.primary }]}>B</Text>
-      </View>
+      <Image source={require("../../assets/images/logo.png")} style={styles.mark}
+        resizeMode="contain" accessible accessibilityLabel="Dr Bloom Care flower logo" />
       <Text style={[styles.brand, { color: colors.foreground }]}>Dr Bloom Care</Text>
       <Text style={[styles.title, { color: colors.foreground }]}>
         {codeSent ? "Verify your email" : "Create your free account"}
@@ -157,8 +157,7 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: "center", padding: 26, paddingBottom: 48 },
-  mark: { width: 58, height: 58, borderRadius: 20, alignItems: "center", justifyContent: "center", alignSelf: "center" },
-  markText: { fontFamily: "Nunito_700Bold", fontSize: 31 },
+  mark: { width: 124, height: 124, borderRadius: 20, alignSelf: "center" },
   brand: { fontFamily: "Nunito_700Bold", fontSize: 13, letterSpacing: 2, textAlign: "center", marginTop: 14 },
   title: { fontFamily: "Nunito_700Bold", fontSize: 27, textAlign: "center", marginTop: 20 },
   subtitle: { fontFamily: "Nunito_400Regular", fontSize: 15, lineHeight: 22, textAlign: "center", marginTop: 8, marginBottom: 24 },
