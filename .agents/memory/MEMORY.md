@@ -6,3 +6,5 @@
 - [Artifact service routing](artifact-service-routing.md) — directory names do not define HTTP prefixes; wrong API addresses can return catch-all HTML with a successful status.
 - [Cross-platform confirmations](expo-confirmations.md) — critical confirmations need an in-app modal; React Native Alert can silently do nothing in web previews.
 - [Medical-team inbox policy](medical-team-policy.md) — paid members tag profiles and DM a shared care team; specialists answer under their own verified identities.
+- [Pregnancy reminder continuity](pregnancy-reminder-policy.md) — mode/billing changes must not silently cancel existing medical alerts; lock-screen details stay generic.
+- [Test-browser memory](test-browser-memory.md) — abandoned Chromium processes can exhaust memory and stall Node startup; check resources before retrying tools.

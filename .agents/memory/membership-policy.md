@@ -9,9 +9,9 @@ Free registration uses email/password with a public username. Free members may r
 
 **How to apply:** Keep mode switching available in Profile for every member. Treat entitlement changes as separate authorized actions.
 
-The first administrator must be explicitly authorized from the email the user supplies later, never through a self-selected account role. Professional blue badges require the administrator to check identity and credentials.
+Administrator identities must be explicitly authorized by the owner, never through a self-selected account role. Professional blue badges require the administrator to check identity and credentials.
 
-**Why:** The user deferred supplying their admin email and requested verified care professionals, not unrestricted self-verification.
+**Why:** The user explicitly designated the super-administrator identity and requested verified care professionals, not unrestricted self-verification.
 
 **How to apply:** Never auto-promote the first account or manufacture a verified professional. Keep initial admin tools locked until the intended identity is provided.
 

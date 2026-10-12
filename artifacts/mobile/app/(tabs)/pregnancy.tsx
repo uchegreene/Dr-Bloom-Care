@@ -66,7 +66,9 @@ export default function PregnancyScreen() {
 
   if (!hasData || isEditing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 32 }}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.setupContainer}>
           <Feather name="heart" size={48} color={colors.primary} style={{ marginBottom: 24 }} />
           <Text style={[styles.setupTitle, { color: colors.foreground }]}>Pregnancy Setup</Text>
@@ -95,13 +97,24 @@ export default function PregnancyScreen() {
           >
             <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Calculate Due Date</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.reminderCard, { backgroundColor: colors.secondary }]}
+            onPress={() => router.push('/reminders')} accessibilityLabel="Appointments and medicine reminders">
+            <Feather name="bell" size={22} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.reminderTitle, { color: colors.foreground }]}>Appointments & medicine</Text>
+              <Text style={[styles.reminderSubtitle, { color: colors.mutedForeground }]}>
+                Set care reminders even before entering your due date
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
           {isEditing && (
             <TouchableOpacity style={{ marginTop: 20 }} onPress={() => setIsEditing(false)}>
               <Text style={{ color: colors.primary, fontFamily: 'Nunito_600SemiBold', fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -154,9 +167,9 @@ export default function PregnancyScreen() {
             <Feather name="bell" size={22} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.reminderTitle, { color: colors.foreground }]}>Appointments & Medication</Text>
+            <Text style={[styles.reminderTitle, { color: colors.foreground }]}>Appointments & medicine</Text>
             <Text style={[styles.reminderSubtitle, { color: colors.mutedForeground }]}>
-              Set alerts for checkups and daily medication reminders
+              Appointment alerts and daily medicine reminders, at the times your clinician prescribed
             </Text>
           </View>
           <Feather name="chevron-right" size={22} color={colors.mutedForeground} />
