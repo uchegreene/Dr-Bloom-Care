@@ -60,7 +60,7 @@ export default function SignInScreen() {
       <View style={[styles.mark, { backgroundColor: colors.secondary }]}>
         <Text style={[styles.markText, { color: colors.primary }]}>B</Text>
       </View>
-      <Text style={[styles.brand, { color: colors.foreground }]}>HER BLOOM</Text>
+      <Text style={[styles.brand, { color: colors.foreground }]}>Dr Bloom Care</Text>
       <Text style={[styles.title, { color: colors.foreground }]}>Welcome back</Text>
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
         Sign in with the email and password on your account.
@@ -101,7 +101,7 @@ export default function SignInScreen() {
         </Text>
       </TouchableOpacity>
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        New to Bloom?{" "}
+        New to Dr Bloom Care?{" "}
         <Link href={"/(auth)/sign-up" as Href} style={{ color: colors.primary, fontWeight: "700" }}>
           Create a free account
         </Link>

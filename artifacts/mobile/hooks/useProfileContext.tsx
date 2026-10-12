@@ -167,7 +167,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         Boolean(isSignedIn && accountQuery.isLoading) ||
         Boolean(updateAccount.isPending),
       profileError: accountQuery.error
-        ? "Bloom couldn’t load your account. Check your connection and try again."
+        ? "Dr Bloom Care couldn’t load your account. Check your connection and try again."
         : null,
       updateProfile,
       completeOnboarding,

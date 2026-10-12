@@ -101,7 +101,7 @@ export default function ProfileScreen() {
     if (!selectedPlan || selectedFee == null) return;
     const accepted = await confirm(
       "Confirm external payment",
-      `Bloom does not take payment in the app. Only continue after paying ${formatNaira(selectedFee)} outside Bloom. An administrator will verify your payment before activating ${selectedPlan === "cycle" ? "cycle" : "pregnancy"} tracking.`,
+      `Dr Bloom Care does not take payment in the app. Only continue after paying ${formatNaira(selectedFee)} outside Dr Bloom Care. An administrator will verify your payment before activating ${selectedPlan === "cycle" ? "cycle" : "pregnancy"} tracking.`,
       "I have paid",
       "Not yet",
     );
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>{(profile?.name || "B")[0].toUpperCase()}</Text>
         </View>
         <Text style={[styles.avatarName, { color: colors.foreground }]}>
-          {profile?.name || "Bloom member"}
+          {profile?.name || "Dr Bloom Care member"}
         </Text>
         <Text style={[styles.handle, { color: colors.mutedForeground }]}>
           @{profile?.username || "member"}
@@ -183,7 +183,7 @@ export default function ProfileScreen() {
             ) : (
               <>
                 <Text style={[styles.smallText, { color: colors.mutedForeground, marginTop: 6 }]}>
-                  Payment is handled outside Bloom. An administrator activates the plan after checking payment.
+                  Payment is handled outside Dr Bloom Care. An administrator activates the plan after checking payment.
                 </Text>
                 <TouchableOpacity
                   onPress={requestActivation}

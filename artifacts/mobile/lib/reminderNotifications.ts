@@ -47,9 +47,9 @@ const driver: ReminderNotificationDriver = {
     const module = await notifications();
     return module.scheduleNotificationAsync({
       content: {
-        title: reminder.type === "appointment" ? "Bloom appointment reminder" : "Bloom medicine reminder",
+        title: reminder.type === "appointment" ? "Dr Bloom Care appointment reminder" : "Dr Bloom Care medicine reminder",
         // Do not put private medicine names, clinic details or notes on a lockscreen.
-        body: "You have a pregnancy-care reminder. Open Bloom to view the details.",
+        body: "You have a pregnancy-care reminder. Open Dr Bloom Care to view the details.",
         sound: "default",
         data: { bloomReminder: true, ownerId, reminderId: reminder.id, route: "/reminders" },
       },

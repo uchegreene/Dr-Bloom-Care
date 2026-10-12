@@ -118,7 +118,7 @@ router.put("/account", requireBloomMember, async (req, res) => {
   const { bloomUserId, bloomEmail } = req as BloomRequest;
   const payload = parsed.data;
   if (!payload.femaleOnlyConfirmed) {
-    res.status(403).json({ error: "Bloom is a women-only community." });
+    res.status(403).json({ error: "Dr Bloom Care is a women-only community." });
     return;
   }
   try {

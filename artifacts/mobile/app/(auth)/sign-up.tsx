@@ -75,7 +75,7 @@ export default function SignUpScreen() {
       <View style={[styles.mark, { backgroundColor: colors.secondary }]}>
         <Text style={[styles.markText, { color: colors.primary }]}>B</Text>
       </View>
-      <Text style={[styles.brand, { color: colors.foreground }]}>HER BLOOM</Text>
+      <Text style={[styles.brand, { color: colors.foreground }]}>Dr Bloom Care</Text>
       <Text style={[styles.title, { color: colors.foreground }]}>
         {codeSent ? "Verify your email" : "Create your free account"}
       </Text>

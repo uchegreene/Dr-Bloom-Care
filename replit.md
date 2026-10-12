@@ -1,4 +1,4 @@
-# HER BLOOM
+# Dr Bloom Care
 
 A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, pregnancy tracking, a community feed, and private topic-based conversations with a shared medical team. Clerk handles email/password accounts. The API and PostgreSQL persist profiles, memberships, professional advice, community posts/comments/likes/tags, medical conversations and explicit professional-account assignments. Private health trackers remain account-scoped on-device storage. Onboarding collects a public username, name, date of birth (stored as `YYYY-MM-DD`, age 13–120), and women-only self-attestation.
 

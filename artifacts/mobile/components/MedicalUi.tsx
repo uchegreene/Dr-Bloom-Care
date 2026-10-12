@@ -47,7 +47,7 @@ export function Notice({ icon = "info", children, tone = "soft" }: { icon?: keyo
 }
 
 export const TEAM_DISCLOSURE =
-  "Private messages are visible only to you and Bloom's authorised medical team, who share one inbox. A team member answers under their own verified profile. Bloom is not an emergency service: if you may be in danger, call your local emergency number or go to the nearest hospital.";
+  "Private messages are visible only to you and Dr Bloom Care's authorised medical team, who share one inbox. A team member answers under their own verified profile. Dr Bloom Care is not an emergency service: if you may be in danger, call your local emergency number or go to the nearest hospital.";
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const colors = useColors();

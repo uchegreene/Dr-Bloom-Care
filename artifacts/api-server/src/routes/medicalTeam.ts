@@ -24,7 +24,7 @@ router.post("/", async (req, res) => {
   const advisor = await activeAdvisor(advisorId);
   const [account] = await db.select().from(bloomAccountsTable).where(eq(bloomAccountsTable.clerkUserId, userId)).limit(1);
   if (!account?.femaleOnlyConfirmed || !account.username || !account.name || !account.dateOfBirth) {
-    throw new MedicalError(400, "The professional must register and finish their Bloom profile first.");
+    throw new MedicalError(400, "The professional must register and finish their Dr Bloom Care profile first.");
   }
   const [owner] = await db.select().from(medicalTeamTable).where(eq(medicalTeamTable.advisorId, advisorId)).limit(1);
   if (owner && owner.userId !== userId) throw new MedicalError(409, "That professional profile already belongs to another team account.");

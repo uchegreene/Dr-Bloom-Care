@@ -43,7 +43,7 @@ export default function Onboarding() {
     const cleanedUsername = username.trim().replace(/^@/, "").toLowerCase();
     const parsedDate = parseISO(dob.trim());
     if (!femaleOnlyConfirmed) {
-      return setError("Confirm that Bloom is a women-only community before continuing.");
+      return setError("Confirm that Dr Bloom Care is a women-only community before continuing.");
     }
     if (name.trim().length < 2) return setError("Enter your name.");
     if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanedUsername)) {
@@ -53,7 +53,7 @@ export default function Onboarding() {
       return setError("Enter your date of birth as YYYY-MM-DD.");
     }
     const age = differenceInYears(new Date(), parsedDate);
-    if (age < 13) return setError("You must be at least 13 years old to use Bloom.");
+    if (age < 13) return setError("You must be at least 13 years old to use Dr Bloom Care.");
     if (age > 120) return setError("Enter a valid date of birth.");
 
     setError("");
@@ -116,7 +116,7 @@ export default function Onboarding() {
             color={femaleOnlyConfirmed ? colors.primary : colors.mutedForeground}
           />
           <Text style={[styles.attestationText, { color: colors.foreground }]}>
-            I identify as a woman and understand Bloom is a women-only community.
+            I identify as a woman and understand Dr Bloom Care is a women-only community.
           </Text>
         </TouchableOpacity>
 
@@ -200,7 +200,7 @@ export default function Onboarding() {
         >
           {saving ? <ActivityIndicator color={colors.primaryForeground} /> : null}
           <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-            {saving ? "Saving…" : "Continue to Bloom"}
+            {saving ? "Saving…" : "Continue to Dr Bloom Care"}
           </Text>
         </TouchableOpacity>
       </ScrollView>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "HER BLOOM",
+    "name": "Dr Bloom Care",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,7 +34,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow HER BLOOM to access your photos so you can add them to your community posts."
+          "photosPermission": "Allow Dr Bloom Care to access your photos so you can add them to your community posts."
         }
       ],
       [

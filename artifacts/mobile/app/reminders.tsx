@@ -213,7 +213,7 @@ export default function RemindersScreen() {
 
         <View style={[styles.banner, { backgroundColor: colors.secondary }]}>
           <Text style={[styles.bannerText, { color: colors.foreground }]}>
-            Use the timing your clinician prescribed. Bloom only reminds you; it does not recommend medicines or doses.
+            Use the timing your clinician prescribed. Dr Bloom Care only reminds you; it does not recommend medicines or doses.
           </Text>
         </View>
 
@@ -253,7 +253,7 @@ export default function RemindersScreen() {
               {wrongPlan
                 ? 'Creating and editing reminders needs an active Pregnancy membership. Your current plan is for a different profile.'
                 : wrongMode
-                  ? 'Switch your profile to pregnant mode in settings to create or edit reminders. Bloom will not change your mode automatically.'
+                  ? 'Switch your profile to pregnant mode in settings to create or edit reminders. Dr Bloom Care will not change your mode automatically.'
                   : 'Creating and editing reminders is not available right now.'}
             </Text>
           </View>
