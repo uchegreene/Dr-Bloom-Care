@@ -9,6 +9,193 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Published AI education for the member's active paid plan
+ */
+export const ListDailyTipsResponseItem = zod.object({
+  "id": zod.number(),
+  "date": zod.string(),
+  "audience": zod.enum(['cycle', 'pregnancy']),
+  "status": zod.enum(['queued', 'generating', 'draft', 'approved', 'rejected', 'published', 'error']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "model": zod.string(),
+  "reviewerName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "error": zod.string().nullable()
+})
+export const ListDailyTipsResponse = zod.array(ListDailyTipsResponseItem)
+
+
+/**
+ * @summary This member's published-tip notices
+ */
+export const ListDailyTipNoticesResponseItem = zod.object({
+  "id": zod.number(),
+  "tip": zod.object({
+  "id": zod.number(),
+  "date": zod.string(),
+  "audience": zod.enum(['cycle', 'pregnancy']),
+  "status": zod.enum(['queued', 'generating', 'draft', 'approved', 'rejected', 'published', 'error']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "model": zod.string(),
+  "reviewerName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "error": zod.string().nullable()
+}),
+  "readAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListDailyTipNoticesResponse = zod.array(ListDailyTipNoticesResponseItem)
+
+
+/**
+ * @summary Mark this member's notices as read
+ */
+export const ReadDailyTipNoticesResponse = zod.void()
+
+
+/**
+ * @summary This account's notification device preferences
+ */
+export const ListDailyTipDevicesResponseItem = zod.object({
+  "id": zod.string(),
+  "enabled": zod.boolean()
+})
+export const ListDailyTipDevicesResponse = zod.array(ListDailyTipDevicesResponseItem)
+
+
+/**
+ * @summary Opt this device into or out of daily-tip phone notifications
+ */
+export const setDailyTipDeviceBodyDeviceIdMax = 100;
+
+export const setDailyTipDeviceBodyTokenMax = 256;
+
+
+
+export const SetDailyTipDeviceBody = zod.object({
+  "deviceId": zod.string().min(1).max(setDailyTipDeviceBodyDeviceIdMax),
+  "enabled": zod.boolean(),
+  "token": zod.string().max(setDailyTipDeviceBodyTokenMax).optional()
+})
+
+export const SetDailyTipDeviceResponse = zod.object({
+  "id": zod.string(),
+  "enabled": zod.boolean()
+})
+
+
+/**
+ * @summary Remove this account's device at sign-out
+ */
+export const RemoveDailyTipDeviceParams = zod.object({
+  "deviceId": zod.coerce.string()
+})
+
+export const RemoveDailyTipDeviceResponse = zod.void()
+
+
+/**
+ * @summary Medical team review queue and recent publications
+ */
+export const ListDailyTipDraftsResponseItem = zod.object({
+  "id": zod.number(),
+  "date": zod.string(),
+  "audience": zod.enum(['cycle', 'pregnancy']),
+  "status": zod.enum(['queued', 'generating', 'draft', 'approved', 'rejected', 'published', 'error']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "model": zod.string(),
+  "reviewerName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "error": zod.string().nullable()
+})
+export const ListDailyTipDraftsResponse = zod.array(ListDailyTipDraftsResponseItem)
+
+
+/**
+ * @summary Queue missing drafts without overwriting reviewed content
+ */
+export const generateDailyTipDraftsBodyDaysMax = 7;
+
+
+
+export const GenerateDailyTipDraftsBody = zod.object({
+  "days": zod.number().min(1).max(generateDailyTipDraftsBodyDaysMax)
+})
+
+export const GenerateDailyTipDraftsResponse = zod.object({
+  "queued": zod.number()
+})
+
+
+/**
+ * @summary Edit, approve, reject or retry an AI draft
+ */
+export const ReviewDailyTipParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const reviewDailyTipBodyTitleMax = 180;
+
+export const reviewDailyTipBodyBodyMax = 5000;
+
+
+
+export const ReviewDailyTipBody = zod.object({
+  "action": zod.enum(['edit', 'approve', 'reject', 'retry']),
+  "title": zod.string().min(1).max(reviewDailyTipBodyTitleMax).optional(),
+  "body": zod.string().min(1).max(reviewDailyTipBodyBodyMax).optional()
+})
+
+export const ReviewDailyTipResponse = zod.object({
+  "id": zod.number(),
+  "date": zod.string(),
+  "audience": zod.enum(['cycle', 'pregnancy']),
+  "status": zod.enum(['queued', 'generating', 'draft', 'approved', 'rejected', 'published', 'error']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "model": zod.string(),
+  "reviewerName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "error": zod.string().nullable()
+})
+
+
+/**
+ * @summary Worker settings and current reviewer access
+ */
+export const GetDailyTipStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "isAdmin": zod.boolean(),
+  "canApprove": zod.boolean(),
+  "schedule": zod.string(),
+  "provider": zod.string()
+})
+
+
+/**
+ * @summary Super administrator can pause or resume automation
+ */
+export const SetDailyTipStatusBody = zod.object({
+  "enabled": zod.boolean()
+})
+
+export const SetDailyTipStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "isAdmin": zod.boolean(),
+  "canApprove": zod.boolean(),
+  "schedule": zod.string(),
+  "provider": zod.string()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

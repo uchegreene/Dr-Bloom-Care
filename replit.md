@@ -67,4 +67,15 @@ A warm, supportive Expo (React Native) mobile app for women, mothers, and mother
 
 ## Pointers
 
+## Daily AI health tips
+
+- Gemini creates shared cycle and pregnancy education drafts, never personalised treatment. Do not send private logs, pregnancy dates, medication records, patient messages or account details to the model.
+- Active verified medical-team assignments are required for clinical approval, including for a super administrator. Editing clears approval; release rechecks the reviewer's access. Unapproved tips never publish or notify members.
+- Publication is at 09:00 Africa/Lagos (08:00 UTC), checked every 30 seconds by the API process. The owner selected Reserved VM hosting for continuous scheduling. Idle Autoscale/static hosting cannot guarantee this schedule.
+- Draft generation prepares today and tomorrow, with optional staff preparation of up to seven days. Durable unique records and independent PostgreSQL worker leases prevent repeated generation/publication across restarts and keep AI latency from delaying releases.
+- Published tips and private in-app notices require a matching active paid plan. Native opt-in uses Expo push tokens, a configured native build, and phone permission; web and Expo Go are not promised background delivery. Replit Launch/TestFlight setup is required before confirming iPhone push delivery. Never recommend manual EAS CLI publishing.
+- Keep lock-screen notices generic. Device registrations are account-bound and removed best-effort at sign-out; workers recheck plan/expiry, reviewer approval and device ownership. Push acceptance is not proof a phone displayed the notification.
+- Validate with `pnpm --filter @workspace/api-server run test:daily-tips`, API typecheck and mobile typecheck. Integration tests use an isolated temporary PostgreSQL schema and test-only SDK aliases, never a production auth bypass.
+- Publishing needs the additive daily-tip database schema changes applied to production. Do not publish from the agent or run direct production migrations; use Replit's Publish flow.
+
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

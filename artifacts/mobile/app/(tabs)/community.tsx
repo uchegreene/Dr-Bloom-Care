@@ -12,6 +12,7 @@ import {
   useToggleCommunityLike,
   type CommunityPost,
 } from "@workspace/api-client-react";
+import { useTipEligibility, useUnreadTipCount } from "@/hooks/useDailyTips";
 import { useColors } from "@/hooks/useColors";
 import { POLL_MS, useMedicalAccess } from "@/hooks/useMedicalAccess";
 import { Empty, ErrorBox, Notice, SkeletonRows, VerifiedBadge } from "@/components/MedicalUi";
@@ -77,6 +78,8 @@ export default function CommunityScreen() {
   const qc = useQueryClient();
   const { userId, ready, isPaid, isStaff } = useMedicalAccess();
   const canInteract = ready && isPaid;
+  const unreadTips = useUnreadTipCount();
+  const { eligible: tipsEligible } = useTipEligibility();
   const [segment, setSegment] = useState<"posts" | "advice">("posts");
   const [filter, setFilter] = useState("All");
   const [notice, setNotice] = useState("");
@@ -104,6 +107,12 @@ export default function CommunityScreen() {
     <View>
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: colors.foreground }]}>Community</Text>
+        {tipsEligible ? (
+          <TouchableOpacity onPress={() => router.push("/daily-tips" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]}>
+            <Feather name="sun" size={15} color={colors.primary} />
+            <Text style={[styles.pillText, { color: colors.primary }]}>Daily tips{unreadTips > 0 ? ` (${unreadTips})` : ""}</Text>
+          </TouchableOpacity>
+        ) : null}
         {isStaff ? (
           <TouchableOpacity onPress={() => router.push("/medical-team" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]}>
             <Feather name="inbox" size={15} color={colors.primary} />
@@ -203,7 +212,7 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1 },
   content: { padding: 18, paddingBottom: 120 },
-  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
+  titleRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   title: { fontFamily: "Nunito_700Bold", fontSize: 28 },
   pill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
   pillText: { fontFamily: "Nunito_700Bold", fontSize: 13 },

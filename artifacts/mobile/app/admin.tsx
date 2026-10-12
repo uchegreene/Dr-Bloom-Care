@@ -249,6 +249,9 @@ export default function AdminScreen() {
       <Text style={[styles.caption, { color: colors.mutedForeground }]}>
         Fees, manual payment verification, and professional advice publishing.
       </Text>
+      <TouchableOpacity onPress={() => router.push("/daily-tip-review" as never)} style={{ paddingVertical: 8 }}>
+        <Text style={{ fontFamily: "Nunito_700Bold", fontSize: 14, color: colors.primary }}>Review daily health tips</Text>
+      </TouchableOpacity>
       {feedback ? <Text style={[styles.feedback, { color: colors.primary }]}>{feedback}</Text> : null}
       {membersQuery.error || advisorsQuery.error || plansQuery.error ? (
         <Text style={[styles.feedback, { color: "#B42318" }]}>

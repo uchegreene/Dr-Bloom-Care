@@ -3,6 +3,7 @@
   "compileOnSave": false,
   "files": [],
   "references": [
+    { "path": "./lib/integrations-gemini-ai" },
     {
       "path": "./lib/db"
     },

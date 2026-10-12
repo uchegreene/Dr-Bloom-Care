@@ -19,3 +19,4 @@
 
 export * from "./bloom";
 export * from "./medical";
+export * from "./dailyTips";

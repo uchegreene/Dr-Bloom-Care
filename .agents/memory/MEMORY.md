@@ -11,3 +11,5 @@
 - [Password minimum](password-policy.md) — owner requires an eight-character minimum; signup validation and the authentication provider must agree.
 - [Branding continuity](branding-continuity.md) — display-name changes must preserve accounts, health logs, app identifiers and existing professional identities.
 - [Daily AI tip policy](daily-ai-tip-policy.md) — medical approval before publishing at 9 a.m. Nigeria time; paid audiences and private-health-data boundaries.
+- [OpenAPI body components](openapi-body-components.md) — named input components avoid duplicate validation/model exports from inline request bodies.
+- [Externalized SDK dependencies](externalized-sdk-dependencies.md) — bundled workspace libraries need externalized SDKs available in the executable service’s own dependencies.

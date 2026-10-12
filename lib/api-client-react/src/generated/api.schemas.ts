@@ -5,6 +5,113 @@
  * Bloom account, plan, and care-advice API
  * OpenAPI spec version: 0.1.0
  */
+export interface DailyTipDeviceInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  deviceId: string;
+  enabled: boolean;
+  /** @maxLength 256 */
+  token?: string;
+}
+
+export interface DailyTipQueueInput {
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  days: number;
+}
+
+export type DailyTipReviewInputAction = typeof DailyTipReviewInputAction[keyof typeof DailyTipReviewInputAction];
+
+
+export const DailyTipReviewInputAction = {
+  edit: 'edit',
+  approve: 'approve',
+  reject: 'reject',
+  retry: 'retry',
+} as const;
+
+export interface DailyTipReviewInput {
+  action: DailyTipReviewInputAction;
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  body?: string;
+}
+
+export interface DailyTipStatusInput {
+  enabled: boolean;
+}
+
+export type DailyTipAudience = typeof DailyTipAudience[keyof typeof DailyTipAudience];
+
+
+export const DailyTipAudience = {
+  cycle: 'cycle',
+  pregnancy: 'pregnancy',
+} as const;
+
+export type DailyTipStatusProperty = typeof DailyTipStatusProperty[keyof typeof DailyTipStatusProperty];
+
+
+export const DailyTipStatusProperty = {
+  queued: 'queued',
+  generating: 'generating',
+  draft: 'draft',
+  approved: 'approved',
+  rejected: 'rejected',
+  published: 'published',
+  error: 'error',
+} as const;
+
+export interface DailyTip {
+  id: number;
+  date: string;
+  audience: DailyTipAudience;
+  status: DailyTipStatusProperty;
+  title: string;
+  body: string;
+  model: string;
+  /** @nullable */
+  reviewerName: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  error: string | null;
+}
+
+export interface DailyTipNotice {
+  id: number;
+  tip: DailyTip;
+  /** @nullable */
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface DailyTipDevice {
+  id: string;
+  enabled: boolean;
+}
+
+export interface DailyTipStatus {
+  enabled: boolean;
+  isAdmin: boolean;
+  canApprove: boolean;
+  schedule: string;
+  provider: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -485,4 +592,8 @@ export interface MedicalTeamMember {
   advisorId: number;
   advisorName: string;
 }
+
+export type GenerateDailyTipDrafts202 = {
+  queued: number;
+};
 

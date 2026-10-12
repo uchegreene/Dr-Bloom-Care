@@ -31,6 +31,15 @@ import type {
   CommunityPostInput,
   CommunityUpload,
   CommunityUploadInput,
+  DailyTip,
+  DailyTipDevice,
+  DailyTipDeviceInput,
+  DailyTipNotice,
+  DailyTipQueueInput,
+  DailyTipReviewInput,
+  DailyTipStatus,
+  DailyTipStatusInput,
+  GenerateDailyTipDrafts202,
   HealthStatus,
   MedicalConversation,
   MedicalConversationInput,
@@ -72,6 +81,812 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListDailyTipsUrl = () => {
+
+
+
+
+  return `/api/daily-tips`
+}
+
+/**
+ * @summary Published AI education for the member's active paid plan
+ */
+export const listDailyTips = async ( options?: RequestInit): Promise<DailyTip[]> => {
+
+  return customFetch<DailyTip[]>(getListDailyTipsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDailyTipsQueryKey = () => {
+    return [
+    `/api/daily-tips`
+    ] as const;
+    }
+
+
+export const getListDailyTipsQueryOptions = <TData = Awaited<ReturnType<typeof listDailyTips>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTips>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDailyTipsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDailyTips>>> = ({ signal }) => listDailyTips({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDailyTips>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDailyTipsQueryResult = NonNullable<Awaited<ReturnType<typeof listDailyTips>>>
+export type ListDailyTipsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Published AI education for the member's active paid plan
+ */
+
+export function useListDailyTips<TData = Awaited<ReturnType<typeof listDailyTips>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTips>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDailyTipsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDailyTipNoticesUrl = () => {
+
+
+
+
+  return `/api/daily-tips/notices`
+}
+
+/**
+ * @summary This member's published-tip notices
+ */
+export const listDailyTipNotices = async ( options?: RequestInit): Promise<DailyTipNotice[]> => {
+
+  return customFetch<DailyTipNotice[]>(getListDailyTipNoticesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDailyTipNoticesQueryKey = () => {
+    return [
+    `/api/daily-tips/notices`
+    ] as const;
+    }
+
+
+export const getListDailyTipNoticesQueryOptions = <TData = Awaited<ReturnType<typeof listDailyTipNotices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDailyTipNoticesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDailyTipNotices>>> = ({ signal }) => listDailyTipNotices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDailyTipNotices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDailyTipNoticesQueryResult = NonNullable<Awaited<ReturnType<typeof listDailyTipNotices>>>
+export type ListDailyTipNoticesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary This member's published-tip notices
+ */
+
+export function useListDailyTipNotices<TData = Awaited<ReturnType<typeof listDailyTipNotices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDailyTipNoticesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReadDailyTipNoticesUrl = () => {
+
+
+
+
+  return `/api/daily-tips/notices/read`
+}
+
+/**
+ * @summary Mark this member's notices as read
+ */
+export const readDailyTipNotices = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getReadDailyTipNoticesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getReadDailyTipNoticesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readDailyTipNotices>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof readDailyTipNotices>>, TError,void, TContext> => {
+
+const mutationKey = ['readDailyTipNotices'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof readDailyTipNotices>>, void> = () => {
+
+
+          return  readDailyTipNotices(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReadDailyTipNoticesMutationResult = NonNullable<Awaited<ReturnType<typeof readDailyTipNotices>>>
+
+    export type ReadDailyTipNoticesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark this member's notices as read
+ */
+export const useReadDailyTipNotices = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readDailyTipNotices>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof readDailyTipNotices>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getReadDailyTipNoticesMutationOptions(options));
+    }
+
+export const getListDailyTipDevicesUrl = () => {
+
+
+
+
+  return `/api/daily-tips/devices`
+}
+
+/**
+ * @summary This account's notification device preferences
+ */
+export const listDailyTipDevices = async ( options?: RequestInit): Promise<DailyTipDevice[]> => {
+
+  return customFetch<DailyTipDevice[]>(getListDailyTipDevicesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDailyTipDevicesQueryKey = () => {
+    return [
+    `/api/daily-tips/devices`
+    ] as const;
+    }
+
+
+export const getListDailyTipDevicesQueryOptions = <TData = Awaited<ReturnType<typeof listDailyTipDevices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDailyTipDevicesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDailyTipDevices>>> = ({ signal }) => listDailyTipDevices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDevices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDailyTipDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listDailyTipDevices>>>
+export type ListDailyTipDevicesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary This account's notification device preferences
+ */
+
+export function useListDailyTipDevices<TData = Awaited<ReturnType<typeof listDailyTipDevices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDailyTipDevicesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetDailyTipDeviceUrl = () => {
+
+
+
+
+  return `/api/daily-tips/devices`
+}
+
+/**
+ * @summary Opt this device into or out of daily-tip phone notifications
+ */
+export const setDailyTipDevice = async (dailyTipDeviceInput: DailyTipDeviceInput, options?: RequestInit): Promise<DailyTipDevice> => {
+
+  return customFetch<DailyTipDevice>(getSetDailyTipDeviceUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dailyTipDeviceInput)
+  }
+);}
+
+
+
+
+export const getSetDailyTipDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDailyTipDevice>>, TError,{data: BodyType<DailyTipDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDailyTipDevice>>, TError,{data: BodyType<DailyTipDeviceInput>}, TContext> => {
+
+const mutationKey = ['setDailyTipDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDailyTipDevice>>, {data: BodyType<DailyTipDeviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setDailyTipDevice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDailyTipDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof setDailyTipDevice>>>
+    export type SetDailyTipDeviceMutationBody = BodyType<DailyTipDeviceInput>
+    export type SetDailyTipDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Opt this device into or out of daily-tip phone notifications
+ */
+export const useSetDailyTipDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDailyTipDevice>>, TError,{data: BodyType<DailyTipDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDailyTipDevice>>,
+        TError,
+        {data: BodyType<DailyTipDeviceInput>},
+        TContext
+      > => {
+      return useMutation(getSetDailyTipDeviceMutationOptions(options));
+    }
+
+export const getRemoveDailyTipDeviceUrl = (deviceId: string,) => {
+
+
+
+
+  return `/api/daily-tips/devices/${deviceId}`
+}
+
+/**
+ * @summary Remove this account's device at sign-out
+ */
+export const removeDailyTipDevice = async (deviceId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveDailyTipDeviceUrl(deviceId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveDailyTipDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDailyTipDevice>>, TError,{deviceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeDailyTipDevice>>, TError,{deviceId: string}, TContext> => {
+
+const mutationKey = ['removeDailyTipDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeDailyTipDevice>>, {deviceId: string}> = (props) => {
+          const {deviceId} = props ?? {};
+
+          return  removeDailyTipDevice(deviceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveDailyTipDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof removeDailyTipDevice>>>
+
+    export type RemoveDailyTipDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove this account's device at sign-out
+ */
+export const useRemoveDailyTipDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDailyTipDevice>>, TError,{deviceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeDailyTipDevice>>,
+        TError,
+        {deviceId: string},
+        TContext
+      > => {
+      return useMutation(getRemoveDailyTipDeviceMutationOptions(options));
+    }
+
+export const getListDailyTipDraftsUrl = () => {
+
+
+
+
+  return `/api/daily-tips/review`
+}
+
+/**
+ * @summary Medical team review queue and recent publications
+ */
+export const listDailyTipDrafts = async ( options?: RequestInit): Promise<DailyTip[]> => {
+
+  return customFetch<DailyTip[]>(getListDailyTipDraftsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDailyTipDraftsQueryKey = () => {
+    return [
+    `/api/daily-tips/review`
+    ] as const;
+    }
+
+
+export const getListDailyTipDraftsQueryOptions = <TData = Awaited<ReturnType<typeof listDailyTipDrafts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDrafts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDailyTipDraftsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDailyTipDrafts>>> = ({ signal }) => listDailyTipDrafts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDrafts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDailyTipDraftsQueryResult = NonNullable<Awaited<ReturnType<typeof listDailyTipDrafts>>>
+export type ListDailyTipDraftsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Medical team review queue and recent publications
+ */
+
+export function useListDailyTipDrafts<TData = Awaited<ReturnType<typeof listDailyTipDrafts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDailyTipDrafts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDailyTipDraftsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGenerateDailyTipDraftsUrl = () => {
+
+
+
+
+  return `/api/daily-tips/review/generate`
+}
+
+/**
+ * @summary Queue missing drafts without overwriting reviewed content
+ */
+export const generateDailyTipDrafts = async (dailyTipQueueInput: DailyTipQueueInput, options?: RequestInit): Promise<GenerateDailyTipDrafts202> => {
+
+  return customFetch<GenerateDailyTipDrafts202>(getGenerateDailyTipDraftsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dailyTipQueueInput)
+  }
+);}
+
+
+
+
+export const getGenerateDailyTipDraftsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDailyTipDrafts>>, TError,{data: BodyType<DailyTipQueueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateDailyTipDrafts>>, TError,{data: BodyType<DailyTipQueueInput>}, TContext> => {
+
+const mutationKey = ['generateDailyTipDrafts'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateDailyTipDrafts>>, {data: BodyType<DailyTipQueueInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateDailyTipDrafts(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateDailyTipDraftsMutationResult = NonNullable<Awaited<ReturnType<typeof generateDailyTipDrafts>>>
+    export type GenerateDailyTipDraftsMutationBody = BodyType<DailyTipQueueInput>
+    export type GenerateDailyTipDraftsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Queue missing drafts without overwriting reviewed content
+ */
+export const useGenerateDailyTipDrafts = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDailyTipDrafts>>, TError,{data: BodyType<DailyTipQueueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateDailyTipDrafts>>,
+        TError,
+        {data: BodyType<DailyTipQueueInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateDailyTipDraftsMutationOptions(options));
+    }
+
+export const getReviewDailyTipUrl = (id: number,) => {
+
+
+
+
+  return `/api/daily-tips/review/${id}`
+}
+
+/**
+ * @summary Edit, approve, reject or retry an AI draft
+ */
+export const reviewDailyTip = async (id: number,
+    dailyTipReviewInput: DailyTipReviewInput, options?: RequestInit): Promise<DailyTip> => {
+
+  return customFetch<DailyTip>(getReviewDailyTipUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dailyTipReviewInput)
+  }
+);}
+
+
+
+
+export const getReviewDailyTipMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewDailyTip>>, TError,{id: number;data: BodyType<DailyTipReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewDailyTip>>, TError,{id: number;data: BodyType<DailyTipReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewDailyTip'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewDailyTip>>, {id: number;data: BodyType<DailyTipReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewDailyTip(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewDailyTipMutationResult = NonNullable<Awaited<ReturnType<typeof reviewDailyTip>>>
+    export type ReviewDailyTipMutationBody = BodyType<DailyTipReviewInput>
+    export type ReviewDailyTipMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Edit, approve, reject or retry an AI draft
+ */
+export const useReviewDailyTip = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewDailyTip>>, TError,{id: number;data: BodyType<DailyTipReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewDailyTip>>,
+        TError,
+        {id: number;data: BodyType<DailyTipReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewDailyTipMutationOptions(options));
+    }
+
+export const getGetDailyTipStatusUrl = () => {
+
+
+
+
+  return `/api/daily-tips/review/settings`
+}
+
+/**
+ * @summary Worker settings and current reviewer access
+ */
+export const getDailyTipStatus = async ( options?: RequestInit): Promise<DailyTipStatus> => {
+
+  return customFetch<DailyTipStatus>(getGetDailyTipStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDailyTipStatusQueryKey = () => {
+    return [
+    `/api/daily-tips/review/settings`
+    ] as const;
+    }
+
+
+export const getGetDailyTipStatusQueryOptions = <TData = Awaited<ReturnType<typeof getDailyTipStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDailyTipStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDailyTipStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailyTipStatus>>> = ({ signal }) => getDailyTipStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDailyTipStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDailyTipStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getDailyTipStatus>>>
+export type GetDailyTipStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Worker settings and current reviewer access
+ */
+
+export function useGetDailyTipStatus<TData = Awaited<ReturnType<typeof getDailyTipStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDailyTipStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDailyTipStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetDailyTipStatusUrl = () => {
+
+
+
+
+  return `/api/daily-tips/review/settings`
+}
+
+/**
+ * @summary Super administrator can pause or resume automation
+ */
+export const setDailyTipStatus = async (dailyTipStatusInput: DailyTipStatusInput, options?: RequestInit): Promise<DailyTipStatus> => {
+
+  return customFetch<DailyTipStatus>(getSetDailyTipStatusUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dailyTipStatusInput)
+  }
+);}
+
+
+
+
+export const getSetDailyTipStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDailyTipStatus>>, TError,{data: BodyType<DailyTipStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDailyTipStatus>>, TError,{data: BodyType<DailyTipStatusInput>}, TContext> => {
+
+const mutationKey = ['setDailyTipStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDailyTipStatus>>, {data: BodyType<DailyTipStatusInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setDailyTipStatus(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDailyTipStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setDailyTipStatus>>>
+    export type SetDailyTipStatusMutationBody = BodyType<DailyTipStatusInput>
+    export type SetDailyTipStatusMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Super administrator can pause or resume automation
+ */
+export const useSetDailyTipStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDailyTipStatus>>, TError,{data: BodyType<DailyTipStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDailyTipStatus>>,
+        TError,
+        {data: BodyType<DailyTipStatusInput>},
+        TContext
+      > => {
+      return useMutation(getSetDailyTipStatusMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

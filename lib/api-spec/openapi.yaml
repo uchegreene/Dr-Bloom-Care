@@ -13,6 +13,156 @@ tags:
   - name: bloom
     description: Bloom membership and care advice
 paths:
+  /daily-tips:
+    get:
+      operationId: listDailyTips
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Published AI education for the member's active paid plan
+      responses:
+        "200":
+          description: Medically approved published tips
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/DailyTip" } }
+  /daily-tips/notices:
+    get:
+      operationId: listDailyTipNotices
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: This member's published-tip notices
+      responses:
+        "200":
+          description: Notices
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/DailyTipNotice" } }
+  /daily-tips/notices/read:
+    post:
+      operationId: readDailyTipNotices
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Mark this member's notices as read
+      responses:
+        "204": { description: Marked read }
+  /daily-tips/devices:
+    get:
+      operationId: listDailyTipDevices
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: This account's notification device preferences
+      responses:
+        "200":
+          description: Devices without private push tokens
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/DailyTipDevice" } }
+    put:
+      operationId: setDailyTipDevice
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Opt this device into or out of daily-tip phone notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DailyTipDeviceInput" }
+      responses:
+        "200":
+          description: Device preference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyTipDevice" }
+  /daily-tips/devices/{deviceId}:
+    delete:
+      operationId: removeDailyTipDevice
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Remove this account's device at sign-out
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Device removed }
+  /daily-tips/review:
+    get:
+      operationId: listDailyTipDrafts
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Medical team review queue and recent publications
+      responses:
+        "200":
+          description: Drafts and recent publications
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/DailyTip" } }
+  /daily-tips/review/generate:
+    post:
+      operationId: generateDailyTipDrafts
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Queue missing drafts without overwriting reviewed content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DailyTipQueueInput" }
+      responses:
+        "202":
+          description: Drafts queued for the background worker
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: integer }
+  /daily-tips/review/{id}:
+    patch:
+      operationId: reviewDailyTip
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Edit, approve, reject or retry an AI draft
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DailyTipReviewInput" }
+      responses:
+        "200":
+          description: Updated tip; editing clears prior approval
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyTip" }
+  /daily-tips/review/settings:
+    get:
+      operationId: getDailyTipStatus
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Worker settings and current reviewer access
+      responses:
+        "200":
+          description: Scheduling and review access
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyTipStatus" }
+    put:
+      operationId: setDailyTipStatus
+      security: [{ bearerAuth: [] }]
+      tags: [bloom]
+      summary: Super administrator can pause or resume automation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DailyTipStatusInput" }
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyTipStatus" }
   /healthz:
     get:
       operationId: healthCheck
@@ -461,6 +611,68 @@ components:
       type: http
       scheme: bearer
   schemas:
+    DailyTipDeviceInput:
+      type: object
+      required: [deviceId, enabled]
+      properties:
+        deviceId: { type: string, minLength: 1, maxLength: 100 }
+        enabled: { type: boolean }
+        token: { type: string, maxLength: 256 }
+    DailyTipQueueInput:
+      type: object
+      required: [days]
+      properties:
+        days: { type: integer, minimum: 1, maximum: 7 }
+    DailyTipReviewInput:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [edit, approve, reject, retry] }
+        title: { type: string, minLength: 1, maxLength: 180 }
+        body: { type: string, minLength: 1, maxLength: 5000 }
+    DailyTipStatusInput:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+    DailyTip:
+      type: object
+      required: [id, date, audience, status, title, body, model, reviewerName, reviewedAt, publishedAt, error]
+      properties:
+        id: { type: integer }
+        date: { type: string }
+        audience: { type: string, enum: [cycle, pregnancy] }
+        status: { type: string, enum: [queued, generating, draft, approved, rejected, published, error] }
+        title: { type: string }
+        body: { type: string }
+        model: { type: string }
+        reviewerName: { type: [string, "null"] }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        publishedAt: { type: [string, "null"], format: date-time }
+        error: { type: [string, "null"] }
+    DailyTipNotice:
+      type: object
+      required: [id, tip, readAt, createdAt]
+      properties:
+        id: { type: integer }
+        tip: { $ref: "#/components/schemas/DailyTip" }
+        readAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    DailyTipDevice:
+      type: object
+      required: [id, enabled]
+      properties:
+        id: { type: string }
+        enabled: { type: boolean }
+    DailyTipStatus:
+      type: object
+      required: [enabled, isAdmin, canApprove, schedule, provider]
+      properties:
+        enabled: { type: boolean }
+        isAdmin: { type: boolean }
+        canApprove: { type: boolean }
+        schedule: { type: string }
+        provider: { type: string }
     HealthStatus:
       type: object
       properties:

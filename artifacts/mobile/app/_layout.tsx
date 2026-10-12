@@ -15,6 +15,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { DailyTipNotificationBridge } from "@/components/DailyTipNotificationBridge";
 
 // Mock contexts (we will implement them next)
 import { AppProviders } from "@/components/Providers";
@@ -52,6 +53,8 @@ function RootLayoutNav() {
       <Stack.Screen name="medical-team" options={{ headerShown: false }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="health-tips" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="daily-tips" options={{ headerShown: false }} />
+      <Stack.Screen name="daily-tip-review" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -63,6 +66,7 @@ function AuthenticatedApp() {
 
   return (
     <AppProviders key={isSignedIn ? userId ?? "signed-in" : "signed-out"}>
+      <DailyTipNotificationBridge />
       <RootLayoutNav />
     </AppProviders>
   );

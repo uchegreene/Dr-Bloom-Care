@@ -8,14 +8,17 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:care": "node scripts/test-care.mjs"
+    "test:care": "node scripts/test-care.mjs",
+    "test:daily-tips": "node scripts/test-daily-tips.mjs"
   },
   "dependencies": {
     "@clerk/express": "^2.1.78",
     "@clerk/shared": "^4.40.0",
     "@google-cloud/storage": "^8.4.0",
+    "@google/genai": "^1.52.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/integrations-gemini-ai": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",

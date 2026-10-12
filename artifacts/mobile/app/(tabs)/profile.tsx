@@ -13,9 +13,10 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
 import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useListPlans, useRequestSubscription } from "@workspace/api-client-react";
+import { useListPlans, useRemoveDailyTipDevice, useRequestSubscription } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useConfirmation } from "@/hooks/useConfirmation";
+import { getTipDeviceId, useUnreadTipCount, useTipEligibility } from "@/hooks/useDailyTips";
 import { useProfile, type ProfileMode, type SubscriptionPlan } from "@/hooks/useProfileContext";
 
 const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
@@ -39,6 +40,9 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const plansQuery = useListPlans();
   const requestMutation = useRequestSubscription();
+  const removeTipDevice = useRemoveDailyTipDevice();
+  const unreadTips = useUnreadTipCount();
+  const { eligible: tipsEligible } = useTipEligibility();
   const [name, setName] = useState(profile?.name ?? "");
   const [username, setUsername] = useState(profile?.username ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
@@ -117,6 +121,12 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
+    try {
+      const deviceId = await getTipDeviceId();
+      await removeTipDevice.mutateAsync({ deviceId });
+    } catch {
+      // best effort; sign-out continues
+    }
     await signOut();
     router.replace("/(auth)/sign-in" as Href);
   };
@@ -283,6 +293,26 @@ export default function ProfileScreen() {
         })}
       </View>
 
+      {tipsEligible && (
+        <TouchableOpacity
+          onPress={() => router.push("/daily-tips" as Href)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 14, marginTop: 12 }}
+        >
+          <Feather name="sun" size={18} color={colors.primary} />
+          <Text style={{ fontFamily: "Nunito_700Bold", fontSize: 15, color: colors.primary }}>
+            Daily health education{unreadTips > 0 ? ` (${unreadTips} new)` : ""}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {(profile?.role === "admin" || profile?.role === "medical_team") && (
+        <TouchableOpacity
+          onPress={() => router.push("/daily-tip-review" as Href)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 14 }}
+        >
+          <Feather name="clipboard" size={18} color={colors.primary} />
+          <Text style={{ fontFamily: "Nunito_700Bold", fontSize: 15, color: colors.primary }}>Daily tip review</Text>
+        </TouchableOpacity>
+      )}
       {(profile?.role === "admin" || profile?.role === "medical_team") && (
         <TouchableOpacity
           onPress={() => router.push("/medical-team" as Href)}
