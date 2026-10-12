@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
+import { useProfile } from '@/hooks/useProfileContext';
 
 export default function PostDetail() {
   const colors = useColors();
@@ -24,6 +25,8 @@ export default function PostDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { posts, likePost, addComment } = useSocial();
+  const { profile } = useProfile();
+  const canInteract = profile?.subscriptionActive === true;
   const [text, setText] = useState('');
 
   const post = posts.find(p => p.id === id);
@@ -38,11 +41,13 @@ export default function PostDetail() {
   }
 
   const handleLike = () => {
+    if (!canInteract) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     likePost(post.id);
   };
 
   const handleComment = async () => {
+    if (!canInteract) return;
     const trimmed = text.trim();
     if (!trimmed) return;
     await addComment(post.id, trimmed);
@@ -85,12 +90,21 @@ export default function PostDetail() {
           <Image source={{ uri: post.imageUri }} style={styles.postImage} contentFit="cover" />
         ) : null}
 
-        <TouchableOpacity style={styles.likeRow} onPress={handleLike} activeOpacity={0.6}>
-          <Feather name="heart" size={20} color={post.liked ? colors.primary : colors.mutedForeground} />
-          <Text style={[styles.likeText, { color: post.liked ? colors.primary : colors.mutedForeground }]}>
-            {post.likes} {post.likes === 1 ? 'like' : 'likes'}
-          </Text>
-        </TouchableOpacity>
+        {canInteract ? (
+          <TouchableOpacity style={styles.likeRow} onPress={handleLike} activeOpacity={0.6}>
+            <Feather name="heart" size={20} color={post.liked ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.likeText, { color: post.liked ? colors.primary : colors.mutedForeground }]}>
+              {post.likes} {post.likes === 1 ? 'like' : 'likes'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.likeRow}>
+            <Feather name="heart" size={20} color={colors.mutedForeground} />
+            <Text style={[styles.likeText, { color: colors.mutedForeground }]}>
+              {post.likes} {post.likes === 1 ? 'like' : 'likes'}
+            </Text>
+          </View>
+        )}
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
@@ -100,7 +114,7 @@ export default function PostDetail() {
 
         {post.comments.length === 0 ? (
           <Text style={[styles.noComments, { color: colors.mutedForeground }]}>
-            No comments yet. Be the first to reply.
+            {canInteract ? "No comments yet. Be the first to reply." : "No comments yet."}
           </Text>
         ) : (
           post.comments.map(c => (
@@ -122,22 +136,24 @@ export default function PostDetail() {
         )}
       </ScrollView>
 
-      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 8 }]}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="Write a comment..."
-          placeholderTextColor={colors.mutedForeground}
-          style={[styles.commentInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
-        />
-        <TouchableOpacity
-          onPress={handleComment}
-          disabled={!text.trim()}
-          style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.border }]}
-        >
-          <Feather name="send" size={18} color={colors.primaryForeground} />
-        </TouchableOpacity>
-      </View>
+      {canInteract ? (
+        <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 8 }]}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder="Write a comment..."
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.commentInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
+          />
+          <TouchableOpacity
+            onPress={handleComment}
+            disabled={!text.trim()}
+            style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.border }]}
+          >
+            <Feather name="send" size={18} color={colors.primaryForeground} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Bloom account, plan, and care-advice API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: bloom
+    description: Bloom membership and care advice
 paths:
   /healthz:
     get:
@@ -24,13 +26,387 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /account:
+    get:
+      operationId: getAccount
+      tags: [bloom]
+      summary: Get the signed-in member account
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Member account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAccount"
+    put:
+      operationId: updateAccount
+      tags: [bloom]
+      summary: Create or update the signed-in member profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "200":
+          description: Updated member account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAccount"
+        "409":
+          description: Username is already taken
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [bloom]
+      summary: Get current cycle and pregnancy plan fees
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current plan fees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanPricing"
+  /subscription-request:
+    post:
+      operationId: requestSubscription
+      tags: [bloom]
+      summary: Tell the administrator a plan fee has been paid outside Bloom
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionRequestInput"
+      responses:
+        "200":
+          description: Payment verification request recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionRequest"
+  /advisors:
+    get:
+      operationId: listAdvisors
+      tags: [bloom]
+      summary: List active verified care advisors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Care advisors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Advisor"
+  /advice:
+    get:
+      operationId: listAdvice
+      tags: [bloom]
+      summary: Read advice published by verified advisors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Advice articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvicePost"
+  /admin/members:
+    get:
+      operationId: listAdminMembers
+      tags: [bloom]
+      summary: List accounts for manual subscription approval
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminMember"
+        "403":
+          description: Administrator access required
+  /admin/plans/{plan}:
+    put:
+      operationId: updatePlanPrice
+      tags: [bloom]
+      summary: Change a plan fee
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: plan
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [cycle, pregnancy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanPriceInput"
+      responses:
+        "200":
+          description: Updated plan fee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanPricing"
+        "403":
+          description: Administrator access required
+  /admin/advisors:
+    get:
+      operationId: listAdminAdvisors
+      tags: [bloom]
+      summary: List all care advisor profiles
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Care advisor profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Advisor"
+    post:
+      operationId: createAdvisor
+      tags: [bloom]
+      summary: Add a verified care advisor profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvisorInput"
+      responses:
+        "201":
+          description: Created verified advisor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advisor"
+        "403":
+          description: Administrator access required
+  /admin/advice:
+    post:
+      operationId: createAdvice
+      tags: [bloom]
+      summary: Publish advice under an approved advisor profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviceInput"
+      responses:
+        "201":
+          description: Published advice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvicePost"
+        "403":
+          description: Administrator access required
+  /admin/members/{userId}/subscription:
+    post:
+      operationId: grantMembership
+      tags: [bloom]
+      summary: Manually activate a paid plan after external payment verification
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MembershipGrantInput"
+      responses:
+        "200":
+          description: Membership activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMember"
+        "403":
+          description: Administrator access required
+        "404":
+          description: Member account not found
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
+      required: [status]
+    MemberAccount:
+      type: object
+      properties:
+        userId: { type: string }
+        email: { type: string }
+        username: { type: ["string", "null"] }
+        name: { type: ["string", "null"] }
+        dateOfBirth: { type: ["string", "null"] }
+        bio: { type: string }
+        femaleOnlyConfirmed: { type: boolean }
+        mode: { type: string, enum: [cycle, pregnant, none] }
+        role: { type: string, enum: [member, admin] }
+        subscriptionPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
+        subscriptionStatus: { type: string, enum: [free, active, expired] }
+        subscriptionExpiresAt: { type: ["string", "null"], format: date-time }
+        requestedPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
+        requestedAt: { type: ["string", "null"], format: date-time }
+        subscriptionActive: { type: boolean }
+        profileComplete: { type: boolean }
       required:
-        - status
-
+        - userId
+        - email
+        - username
+        - name
+        - dateOfBirth
+        - bio
+        - femaleOnlyConfirmed
+        - mode
+        - role
+        - subscriptionPlan
+        - subscriptionStatus
+        - subscriptionExpiresAt
+        - requestedPlan
+        - requestedAt
+        - subscriptionActive
+        - profileComplete
+    AccountInput:
+      type: object
+      properties:
+        username: { type: string, minLength: 3, maxLength: 30, pattern: "^[A-Za-z0-9_]+$" }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        dateOfBirth: { type: string, format: date }
+        bio: { type: string, maxLength: 280 }
+        femaleOnlyConfirmed: { type: boolean }
+        mode: { type: string, enum: [cycle, pregnant, none] }
+      required: [username, name, dateOfBirth, bio, femaleOnlyConfirmed, mode]
+    PlanPricing:
+      type: object
+      properties:
+        plan: { type: string, enum: [cycle, pregnancy] }
+        priceNaira: { type: integer, minimum: 0 }
+      required: [plan, priceNaira]
+    PlanPriceInput:
+      type: object
+      properties:
+        priceNaira: { type: integer, minimum: 0, maximum: 100000000 }
+      required: [priceNaira]
+    SubscriptionRequestInput:
+      type: object
+      properties:
+        plan: { type: string, enum: [cycle, pregnancy] }
+      required: [plan]
+    SubscriptionRequest:
+      type: object
+      properties:
+        requestedPlan: { type: string, enum: [cycle, pregnancy] }
+        requestedAt: { type: string, format: date-time }
+      required: [requestedPlan, requestedAt]
+    Advisor:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        title: { type: string }
+        specialty: { type: string }
+        credentials: { type: string }
+        bio: { type: string }
+        isVerified: { type: boolean }
+        isActive: { type: boolean }
+      required: [id, name, title, specialty, credentials, bio, isVerified, isActive]
+    AdvisorInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        title: { type: string, minLength: 2, maxLength: 100 }
+        specialty: { type: string, minLength: 2, maxLength: 100 }
+        credentials: { type: string, minLength: 2, maxLength: 160 }
+        bio: { type: string, minLength: 10, maxLength: 1200 }
+        credentialsVerified: { type: boolean }
+      required: [name, title, specialty, credentials, bio, credentialsVerified]
+    AdvicePost:
+      type: object
+      properties:
+        id: { type: integer }
+        advisorId: { type: integer }
+        authorName: { type: string }
+        title: { type: string }
+        body: { type: string }
+        category: { type: string, enum: [Cycle health, Pregnancy, Sexual health, Newborn care, General] }
+        credentials: { type: string }
+        specialty: { type: string }
+        isVerified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, advisorId, authorName, title, body, category, credentials, specialty, isVerified, createdAt]
+    AdviceInput:
+      type: object
+      properties:
+        advisorId: { type: integer, minimum: 1 }
+        title: { type: string, minLength: 5, maxLength: 180 }
+        body: { type: string, minLength: 20, maxLength: 6000 }
+        category: { type: string, enum: [Cycle health, Pregnancy, Sexual health, Newborn care, General] }
+      required: [advisorId, title, body, category]
+    AdminMember:
+      type: object
+      properties:
+        userId: { type: string }
+        email: { type: string }
+        username: { type: ["string", "null"] }
+        name: { type: ["string", "null"] }
+        mode: { type: string, enum: [cycle, pregnant, none] }
+        subscriptionPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
+        subscriptionStatus: { type: string, enum: [free, active, expired] }
+        subscriptionExpiresAt: { type: ["string", "null"], format: date-time }
+        requestedPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
+        requestedAt: { type: ["string", "null"], format: date-time }
+      required: [userId, email, username, name, mode, subscriptionPlan, subscriptionStatus, subscriptionExpiresAt, requestedPlan, requestedAt]
+    MembershipGrantInput:
+      type: object
+      properties:
+        plan: { type: string, enum: [cycle, pregnancy] }
+        months: { type: integer, minimum: 1, maximum: 12 }
+        confirmedPayment: { type: boolean }
+      required: [plan, months, confirmedPayment]

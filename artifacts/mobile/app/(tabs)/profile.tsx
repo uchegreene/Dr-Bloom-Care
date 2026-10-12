@@ -1,157 +1,224 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Platform,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Platform,
-  Switch,
-} from 'react-native';
-import { useColors } from '@/hooks/useColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useProfile, ProfileMode } from '@/hooks/useProfileContext';
-import { useSocial } from '@/hooks/useSocialContext';
-import { Feather } from '@expo/vector-icons';
+  View,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useListPlans, useRequestSubscription } from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { useProfile, type ProfileMode, type SubscriptionPlan } from "@/hooks/useProfileContext";
 
-const formatNaira = (n: number) => '\u20A6' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
 
-const MODES: { key: ProfileMode; label: string; icon: keyof typeof Feather.glyphMap; desc: string }[] = [
-  { key: 'cycle', label: 'Cycle Tracking', icon: 'calendar', desc: 'Track your period and symptoms' },
-  { key: 'pregnant', label: 'Pregnancy', icon: 'heart', desc: 'Follow your pregnancy journey' },
-  { key: 'none', label: 'Just Browsing', icon: 'coffee', desc: 'Explore the community only' },
+const MODES: {
+  key: ProfileMode;
+  label: string;
+  description: string;
+  icon: keyof typeof Feather.glyphMap;
+}[] = [
+  { key: "cycle", label: "Cycle mode", description: "Period and cycle tracking", icon: "calendar" },
+  { key: "pregnant", label: "Pregnancy mode", description: "Pregnancy tracking and care", icon: "heart" },
+  { key: "none", label: "Community only", description: "Browse posts without tracking", icon: "users" },
 ];
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { profile, updateProfile, updateSubscription } = useProfile();
-  const { posts } = useSocial();
-  const subscription = profile?.subscription;
-
-  const [name, setName] = useState(profile?.name ?? '');
-  const [bio, setBio] = useState(profile?.bio ?? '');
+  const { profile, updateProfile, refreshAccount } = useProfile();
+  const { signOut } = useAuth();
+  const plansQuery = useListPlans();
+  const requestMutation = useRequestSubscription();
+  const [name, setName] = useState(profile?.name ?? "");
+  const [username, setUsername] = useState(profile?.username ?? "");
+  const [bio, setBio] = useState(profile?.bio ?? "");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomInset = Platform.OS === 'web' ? 100 : insets.bottom + 90;
+  useEffect(() => {
+    setName(profile?.name ?? "");
+    setUsername(profile?.username ?? "");
+    setBio(profile?.bio ?? "");
+  }, [profile?.name, profile?.username, profile?.bio]);
 
-  const myPosts = posts.filter(p => p.authorId === 'me').length;
+  const topInset = Platform.OS === "web" ? 40 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 100 : insets.bottom + 92;
+  const selectedPlan: SubscriptionPlan | null =
+    profile?.mode === "cycle" ? "cycle" :
+      profile?.mode === "pregnant" ? "pregnancy" : null;
+  const selectedFee = selectedPlan
+    ? plansQuery.data?.find((plan) => plan.plan === selectedPlan)?.priceNaira
+    : null;
+  const currentExpiry = profile?.subscriptionExpiresAt
+    ? new Date(profile.subscriptionExpiresAt).toLocaleDateString()
+    : null;
+  const planMatchesMode =
+    Boolean(profile?.subscriptionActive) &&
+    profile?.subscriptionPlan === selectedPlan;
 
-  const handleSave = async () => {
-    await updateProfile({ name: name.trim(), bio: bio.trim() });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
+  const save = async () => {
+    try {
+      await updateProfile({
+        name: name.trim(),
+        username: username.trim().replace(/^@/, "").toLowerCase(),
+        bio: bio.trim(),
+      });
+      setSaved(true);
+      setError("");
+      setTimeout(() => setSaved(false), 1600);
+    } catch (cause) {
+      setSaved(false);
+      setError(
+        (cause as { status?: number }).status === 409
+          ? "That username is already taken."
+          : "Could not save your changes. Please try again.",
+      );
+    }
   };
 
-  const handleModeChange = async (mode: ProfileMode) => {
-    await updateProfile({ mode });
+  const changeMode = async (mode: ProfileMode) => {
+    try {
+      await updateProfile({ mode });
+      setError("");
+    } catch {
+      setError("Could not change mode. Please try again.");
+    }
+  };
+
+  const requestActivation = () => {
+    if (!selectedPlan || selectedFee == null) return;
+    Alert.alert(
+      "Confirm external payment",
+      `Bloom does not take payment in the app. Only continue after paying ${formatNaira(selectedFee)} outside Bloom. An administrator will verify your payment before activating ${selectedPlan === "cycle" ? "cycle" : "pregnancy"} tracking.`,
+      [
+        { text: "Not yet", style: "cancel" },
+        {
+          text: "I have paid",
+          onPress: async () => {
+            try {
+              await requestMutation.mutateAsync({ data: { plan: selectedPlan } });
+              await refreshAccount();
+              Alert.alert("Request sent", "An administrator can now review your activation request.");
+            } catch {
+              Alert.alert("Not sent", "We could not send the request. Check your connection and try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/(auth)/sign-in");
   };
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: topInset + 12, paddingBottom: bottomInset, paddingHorizontal: 20 }}
+      contentContainerStyle={{
+        paddingTop: topInset + 12,
+        paddingBottom: bottomInset,
+        paddingHorizontal: 20,
+      }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.title, { color: colors.foreground }]}>Profile</Text>
-
       <View style={styles.avatarWrap}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>
-            {(name || 'B').charAt(0).toUpperCase()}
-          </Text>
+          <Text style={styles.avatarText}>{(profile?.name || "B")[0].toUpperCase()}</Text>
         </View>
-        <Text style={[styles.avatarName, { color: colors.foreground }]}>{name || 'HER BLOOM Member'}</Text>
+        <Text style={[styles.avatarName, { color: colors.foreground }]}>
+          {profile?.name || "Bloom member"}
+        </Text>
+        <Text style={[styles.handle, { color: colors.mutedForeground }]}>
+          @{profile?.username || "member"}
+        </Text>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: colors.primary }]}>{myPosts}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Posts</Text>
-        </View>
-        <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: colors.primary }]}>
-            {MODES.find(m => m.key === profile?.mode)?.label.split(' ')[0] ?? '—'}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Mode</Text>
-        </View>
-      </View>
-
-      {subscription && (
-        <>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Membership</Text>
-          <View style={[styles.subCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.subHeader}>
-              <View style={[styles.subIcon, { backgroundColor: colors.secondary }]}>
-                <Feather name="award" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.subPlan, { color: colors.foreground }]}>
-                  {subscription.plan === 'pregnancy' ? 'Pregnancy Tracking' : 'Cycle Tracking'}
-                </Text>
-                <Text style={[styles.subPrice, { color: colors.mutedForeground }]}>
-                  {formatNaira(subscription.priceNaira)} / month
-                </Text>
-              </View>
-              <View style={[styles.subBadge, { backgroundColor: subscription.status === 'active' ? colors.accent : colors.muted }]}>
-                <Text style={styles.subBadgeText}>
-                  {subscription.status === 'active' ? 'Active' : 'Canceled'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.subDivider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.subRow}>
-              <Feather name="credit-card" size={16} color={colors.mutedForeground} />
-              <Text style={[styles.subRowText, { color: colors.foreground }]}>
-                {subscription.cardBrand} ending in {subscription.cardLast4}
-              </Text>
-            </View>
-
-            <View style={[styles.renewRow]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.renewTitle, { color: colors.foreground }]}>Auto-renew monthly</Text>
-                <Text style={[styles.renewDesc, { color: colors.mutedForeground }]}>
-                  {subscription.autoRenew ? 'Your plan renews automatically.' : 'Your plan will not renew.'}
-                </Text>
-              </View>
-              <Switch
-                value={subscription.autoRenew}
-                onValueChange={(v) => updateSubscription({ autoRenew: v })}
-                trackColor={{ true: colors.primary, false: colors.border }}
-                thumbColor={colors.card}
-              />
-            </View>
-
-            {subscription.status === 'active' ? (
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.border }]}
-                onPress={() => updateSubscription({ status: 'canceled', autoRenew: false })}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.destructive }]}>Cancel membership</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.border }]}
-                onPress={() => updateSubscription({ status: 'active', autoRenew: true })}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.primary }]}>Reactivate membership</Text>
-              </TouchableOpacity>
-            )}
-
-            <Text style={[styles.subNote, { color: colors.mutedForeground }]}>
-              Demo only. No real payment is taken.
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Membership</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.membershipHeader}>
+          <View style={[styles.iconBox, { backgroundColor: colors.secondary }]}>
+            <Feather name="shield" size={19} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>
+              {planMatchesMode
+                ? `${selectedPlan === "cycle" ? "Cycle" : "Pregnancy"} plan active`
+                : profile?.subscriptionActive
+                  ? "Switching plan needed"
+                  : "Free account"}
+            </Text>
+            <Text style={[styles.smallText, { color: colors.mutedForeground }]}>
+              {planMatchesMode && currentExpiry
+                ? `Manually activated through ${currentExpiry}`
+                : "Free accounts can read community posts."}
             </Text>
           </View>
-        </>
-      )}
+        </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About You</Text>
+        {!planMatchesMode && selectedPlan && (
+          <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>
+              {selectedPlan === "cycle" ? "Cycle tracking" : "Pregnancy tracking"}
+              {"  "}
+              {selectedFee != null ? `${formatNaira(selectedFee)} / month` : ""}
+            </Text>
+            {profile?.requestedPlan === selectedPlan ? (
+              <View style={styles.pending}>
+                <Feather name="clock" size={17} color="#9A6700" />
+                <Text style={styles.pendingText}>Payment verification request sent</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.smallText, { color: colors.mutedForeground, marginTop: 6 }]}>
+                  Payment is handled outside Bloom. An administrator activates the plan after checking payment.
+                </Text>
+                <TouchableOpacity
+                  onPress={requestActivation}
+                  disabled={requestMutation.isPending || selectedFee == null}
+                  style={[styles.secondaryButton, { borderColor: colors.primary, opacity: requestMutation.isPending ? 0.6 : 1 }]}
+                >
+                  {requestMutation.isPending ? <ActivityIndicator color={colors.primary} /> : null}
+                  <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+                    I’ve paid externally — request activation
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </>
+        )}
+        {!selectedPlan && (
+          <Text style={[styles.smallText, { color: colors.mutedForeground, marginTop: 10 }]}>
+            Choose cycle or pregnancy mode below to see that plan’s monthly fee.
+          </Text>
+        )}
+      </View>
+
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About you</Text>
+      <Text style={[styles.label, { color: colors.mutedForeground }]}>Public username</Text>
+      <TextInput
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        autoCorrect={false}
+        placeholder="username"
+        placeholderTextColor={colors.mutedForeground}
+        style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+      />
       <Text style={[styles.label, { color: colors.mutedForeground }]}>Name</Text>
       <TextInput
         value={name}
@@ -160,34 +227,38 @@ export default function ProfileScreen() {
         placeholderTextColor={colors.mutedForeground}
         style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
       />
-      <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>Bio</Text>
+      <Text style={[styles.label, { color: colors.mutedForeground }]}>Bio</Text>
       <TextInput
         value={bio}
         onChangeText={setBio}
         placeholder="Share a little about yourself"
         placeholderTextColor={colors.mutedForeground}
         multiline
-        style={[styles.input, styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+        maxLength={280}
+        style={[styles.input, styles.bio, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
       />
-
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       <TouchableOpacity
-        style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-        onPress={handleSave}
-        activeOpacity={0.85}
+        onPress={save}
+        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
       >
-        <Feather name={saved ? 'check' : 'save'} size={18} color={colors.primaryForeground} />
-        <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
-          {saved ? 'Saved' : 'Save changes'}
+        <Feather name={saved ? "check" : "save"} size={17} color={colors.primaryForeground} />
+        <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>
+          {saved ? "Saved" : "Save profile"}
         </Text>
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 28 }]}>Tracking Mode</Text>
-      <View style={{ gap: 12 }}>
-        {MODES.map(mode => {
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Choose mode</Text>
+      <Text style={[styles.smallText, { color: colors.mutedForeground, marginBottom: 10 }]}>
+        You can switch any time. A matching active plan is required to open tracking.
+      </Text>
+      <View style={{ gap: 10 }}>
+        {MODES.map((mode) => {
           const active = profile?.mode === mode.key;
           return (
             <TouchableOpacity
               key={mode.key}
+              onPress={() => changeMode(mode.key)}
               style={[
                 styles.modeRow,
                 {
@@ -196,212 +267,63 @@ export default function ProfileScreen() {
                   borderWidth: active ? 2 : 1,
                 },
               ]}
-              activeOpacity={0.8}
-              onPress={() => handleModeChange(mode.key)}
             >
-              <View style={[styles.modeIcon, { backgroundColor: colors.secondary }]}>
-                <Feather name={mode.icon} size={20} color={colors.primary} />
-              </View>
+              <Feather name={mode.icon} size={19} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modeLabel, { color: colors.foreground }]}>{mode.label}</Text>
-                <Text style={[styles.modeDesc, { color: colors.mutedForeground }]}>{mode.desc}</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{mode.label}</Text>
+                <Text style={[styles.smallText, { color: colors.mutedForeground }]}>{mode.description}</Text>
               </View>
-              {active && <Feather name="check-circle" size={20} color={colors.primary} />}
+              {active ? <Feather name="check-circle" size={19} color={colors.primary} /> : null}
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {profile?.role === "admin" && (
+        <TouchableOpacity
+          onPress={() => router.push("/admin")}
+          style={[styles.primaryButton, { backgroundColor: colors.primary, marginTop: 24 }]}
+        >
+          <Feather name="settings" size={18} color={colors.primaryForeground} />
+          <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>
+            Admin tools
+          </Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity onPress={handleSignOut} style={styles.signOut}>
+        <Feather name="log-out" size={17} color={colors.mutedForeground} />
+        <Text style={[styles.signOutText, { color: colors.mutedForeground }]}>Sign out</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  title: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 30,
-    marginBottom: 20,
-  },
-  avatarWrap: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 36,
-  },
-  avatarName: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 22,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 28,
-  },
-  statBox: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 22,
-  },
-  statLabel: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 20,
-    marginBottom: 12,
-  },
-  subCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 28,
-  },
-  subHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  subIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subPlan: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 16,
-  },
-  subPrice: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  subBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  subBadgeText: {
-    color: '#fff',
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 12,
-  },
-  subDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 14,
-  },
-  subRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  subRowText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14,
-  },
-  renewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  renewTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
-  renewDesc: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  cancelBtn: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  cancelBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
-  subNote: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  label: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-  },
-  bioInput: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginTop: 20,
-  },
-  saveBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 16,
-  },
-  modeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderRadius: 16,
-    padding: 16,
-  },
-  modeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modeLabel: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 16,
-  },
-  modeDesc: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 2,
-  },
+  title: { fontFamily: "Nunito_700Bold", fontSize: 28 },
+  avatarWrap: { alignItems: "center", marginVertical: 20 },
+  avatar: { width: 70, height: 70, borderRadius: 35, alignItems: "center", justifyContent: "center" },
+  avatarText: { color: "#fff", fontFamily: "Nunito_700Bold", fontSize: 28 },
+  avatarName: { fontFamily: "Nunito_700Bold", fontSize: 19, marginTop: 10 },
+  handle: { fontFamily: "Nunito_400Regular", fontSize: 14, marginTop: 1 },
+  sectionTitle: { fontFamily: "Nunito_700Bold", fontSize: 19, marginTop: 20, marginBottom: 12 },
+  card: { borderWidth: 1, borderRadius: 17, padding: 16 },
+  membershipHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconBox: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  cardTitle: { fontFamily: "Nunito_700Bold", fontSize: 15 },
+  smallText: { fontFamily: "Nunito_400Regular", fontSize: 13, lineHeight: 18 },
+  divider: { height: 1, marginVertical: 14 },
+  pending: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 12 },
+  pendingText: { color: "#7A5200", fontFamily: "Nunito_600SemiBold", fontSize: 13 },
+  secondaryButton: { minHeight: 44, borderWidth: 1, borderRadius: 12, marginTop: 14, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
+  secondaryButtonText: { fontFamily: "Nunito_700Bold", fontSize: 13, textAlign: "center" },
+  label: { fontFamily: "Nunito_600SemiBold", fontSize: 13, marginBottom: 6, marginTop: 12 },
+  input: { minHeight: 48, borderWidth: 1, borderRadius: 12, paddingHorizontal: 13, fontFamily: "Nunito_400Regular", fontSize: 15 },
+  bio: { minHeight: 78, paddingTop: 11, textAlignVertical: "top" },
+  error: { color: "#B42318", fontFamily: "Nunito_600SemiBold", fontSize: 13, marginTop: 10 },
+  primaryButton: { minHeight: 48, borderRadius: 13, marginTop: 16, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center" },
+  primaryButtonText: { fontFamily: "Nunito_700Bold", fontSize: 15 },
+  modeRow: { minHeight: 66, borderRadius: 14, padding: 12, flexDirection: "row", alignItems: "center", gap: 11 },
+  signOut: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 20, marginTop: 8 },
+  signOutText: { fontFamily: "Nunito_600SemiBold", fontSize: 14 },
 });

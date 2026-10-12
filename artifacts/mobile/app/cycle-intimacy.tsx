@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useCycle } from '@/hooks/useCycleContext';
+import { useProfile } from '@/hooks/useProfileContext';
 import { format, parseISO } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,10 +14,16 @@ export default function CycleIntimacyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { intimacyLogs, logIntimacy, removeIntimacy } = useCycle();
+  const { profile } = useProfile();
 
   const existing = date ? intimacyLogs[date] : null;
   const [protectedSex, setProtectedSex] = useState<boolean>(existing?.protectedSex ?? true);
 
+  if (
+    !profile?.subscriptionActive ||
+    profile.subscriptionPlan !== "cycle" ||
+    profile.mode !== "cycle"
+  ) return <Redirect href="/(tabs)/community" />;
   if (!date) return null;
 
   const handleSave = async () => {

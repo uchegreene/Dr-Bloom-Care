@@ -15,6 +15,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { Redirect } from 'expo-router';
+import { useProfile } from '@/hooks/useProfileContext';
 
 export default function ChatThread() {
   const colors = useColors();
@@ -22,11 +24,14 @@ export default function ChatThread() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { friends, messages, sendMessage } = useChat();
+  const { profile } = useProfile();
   const [text, setText] = useState('');
 
   const friend = friends.find(f => f.id === id);
   const thread = messages[id ?? ''] ?? [];
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
+
+  if (!profile?.subscriptionActive) return <Redirect href="/(tabs)/community" />;
 
   const handleSend = async () => {
     const trimmed = text.trim();

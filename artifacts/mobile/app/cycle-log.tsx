@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useCycle } from '@/hooks/useCycleContext';
+import { useProfile } from '@/hooks/useProfileContext';
 import { format, parseISO } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ export default function CycleLogScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { logs, addLog } = useCycle();
+  const { profile } = useProfile();
 
   const existingLog = date ? logs[date] : null;
 
@@ -43,6 +45,11 @@ export default function CycleLogScreen() {
     router.back();
   };
 
+  if (
+    !profile?.subscriptionActive ||
+    profile.subscriptionPlan !== "cycle" ||
+    profile.mode !== "cycle"
+  ) return <Redirect href="/(tabs)/community" />;
   if (!date) return null;
 
   return (

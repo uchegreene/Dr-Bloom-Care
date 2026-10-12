@@ -139,8 +139,19 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
   const env = {
     ...process.env,
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
+    EXPO_PUBLIC_API_BASE_URL:
+      process.env.EXPO_PUBLIC_API_BASE_URL || `https://${expoPublicDomain}/api-server`,
+    EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+      process.env.CLERK_PUBLISHABLE_KEY ||
+      "",
     EXPO_PUBLIC_REPL_ID: expoPublicReplId,
   };
+  if (process.env.REPLIT_DEPLOYMENT) {
+    env.EXPO_PUBLIC_CLERK_PROXY_URL =
+      process.env.EXPO_PUBLIC_CLERK_PROXY_URL ||
+      `${env.EXPO_PUBLIC_API_BASE_URL}/api/__clerk`;
+  }
 
   if (expoPublicReplId) {
     console.log(`Setting EXPO_PUBLIC_REPL_ID=${expoPublicReplId}`);

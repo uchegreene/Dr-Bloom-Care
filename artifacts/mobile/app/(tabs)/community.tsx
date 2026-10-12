@@ -16,10 +16,12 @@ import { useRouter } from 'expo-router';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+import { useListAdvice } from '@workspace/api-client-react';
+import { useProfile } from '@/hooks/useProfileContext';
 
 const FILTERS = ['All', 'Journey', 'Advice', 'Health'];
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, canInteract }: { post: Post; canInteract: boolean }) {
   const colors = useColors();
   const router = useRouter();
   const { likePost } = useSocial();
@@ -61,26 +63,34 @@ function PostCard({ post }: { post: Post }) {
       ) : null}
 
       <View style={styles.cardFooter}>
-        <TouchableOpacity style={styles.action} onPress={handleLike} activeOpacity={0.6}>
-          <Feather
-            name="heart"
-            size={18}
-            color={post.liked ? colors.primary : colors.mutedForeground}
-          />
-          <Text style={[styles.actionText, { color: post.liked ? colors.primary : colors.mutedForeground }]}>
-            {post.likes}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.action}
-          onPress={() => router.push(`/post/${post.id}`)}
-          activeOpacity={0.6}
-        >
-          <Feather name="message-circle" size={18} color={colors.mutedForeground} />
+        {canInteract ? (
+          <>
+            <TouchableOpacity style={styles.action} onPress={handleLike} activeOpacity={0.6}>
+              <Feather
+                name="heart"
+                size={18}
+                color={post.liked ? colors.primary : colors.mutedForeground}
+              />
+              <Text style={[styles.actionText, { color: post.liked ? colors.primary : colors.mutedForeground }]}>
+                {post.likes}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.action}
+              onPress={() => router.push(`/post/${post.id}`)}
+              activeOpacity={0.6}
+            >
+              <Feather name="message-circle" size={18} color={colors.mutedForeground} />
+              <Text style={[styles.actionText, { color: colors.mutedForeground }]}>
+                {post.comments.length}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
           <Text style={[styles.actionText, { color: colors.mutedForeground }]}>
-            {post.comments.length}
+            {post.likes} likes · {post.comments.length} comments
           </Text>
-        </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -91,6 +101,9 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { posts, isLoading } = useSocial();
+  const { profile } = useProfile();
+  const adviceQuery = useListAdvice();
+  const canPublish = profile?.subscriptionActive === true;
   const [filter, setFilter] = useState('All');
 
   const filtered = filter === 'All' ? posts : posts.filter(p => p.tag === filter);
@@ -103,7 +116,7 @@ export default function CommunityScreen() {
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <PostCard post={item} />}
+         renderItem={({ item }) => <PostCard post={item} canInteract={canPublish} />}
         contentContainerStyle={{ paddingBottom: bottomInset, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -151,6 +164,43 @@ export default function CommunityScreen() {
                 );
               }}
             />
+            {!canPublish && (
+              <View style={[styles.readOnlyBanner, { backgroundColor: colors.secondary }]}>
+                <Feather name="eye" size={16} color={colors.primary} />
+                <Text style={[styles.readOnlyText, { color: colors.foreground }]}>
+                  Free access: read community posts and verified care advice.
+                </Text>
+              </View>
+            )}
+            {(adviceQuery.data?.length ?? 0) > 0 && (
+              <View style={styles.adviceSection}>
+                <Text style={[styles.adviceHeading, { color: colors.foreground }]}>
+                  Advice from verified professionals
+                </Text>
+                {adviceQuery.data?.slice(0, 6).map((advice) => (
+                  <View key={advice.id} style={[styles.adviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={styles.advisorLine}>
+                      <Text style={[styles.advisorName, { color: colors.foreground }]}>
+                        {advice.authorName}
+                      </Text>
+                      {advice.isVerified && (
+                        <View style={styles.verifiedBadge} accessibilityLabel="Verified professional">
+                          <Feather name="check" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.advisorCredentials, { color: colors.mutedForeground }]}>
+                      {advice.credentials} · {advice.specialty}
+                    </Text>
+                    <Text style={[styles.adviceTitle, { color: colors.foreground }]}>{advice.title}</Text>
+                    <Text style={[styles.adviceBody, { color: colors.foreground }]} numberOfLines={5}>
+                      {advice.body}
+                    </Text>
+                    <Text style={[styles.adviceCategory, { color: colors.primary }]}>{advice.category}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         }
         ListEmptyComponent={
@@ -162,26 +212,41 @@ export default function CommunityScreen() {
             <View style={styles.empty}>
               <Feather name="message-square" size={40} color={colors.mutedForeground} />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                No posts here yet. Be the first to share.
+                 No community posts here yet.
               </Text>
             </View>
           )
         }
       />
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary, bottom: bottomInset + 8 }]}
-        activeOpacity={0.85}
-        onPress={() => router.push('/post-create')}
-      >
-        <Feather name="edit-2" size={22} color={colors.primaryForeground} />
-      </TouchableOpacity>
+      {canPublish && (
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary, bottom: bottomInset + 8 }]}
+          activeOpacity={0.85}
+          onPress={() => router.push('/post-create')}
+          accessibilityLabel="Create a community post"
+        >
+          <Feather name="edit-2" size={22} color={colors.primaryForeground} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  readOnlyBanner: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 13, marginBottom: 12 },
+  readOnlyText: { flex: 1, fontFamily: "Nunito_600SemiBold", fontSize: 13 },
+  adviceSection: { marginBottom: 10 },
+  adviceHeading: { fontFamily: "Nunito_700Bold", fontSize: 18, marginBottom: 10 },
+  adviceCard: { borderWidth: 1, borderRadius: 17, padding: 14, marginBottom: 10 },
+  advisorLine: { flexDirection: "row", alignItems: "center", gap: 7 },
+  advisorName: { fontFamily: "Nunito_700Bold", fontSize: 14 },
+  verifiedBadge: { width: 15, height: 15, borderRadius: 8, backgroundColor: "#1877F2", alignItems: "center", justifyContent: "center" },
+  advisorCredentials: { fontFamily: "Nunito_400Regular", fontSize: 11, marginTop: 2 },
+  adviceTitle: { fontFamily: "Nunito_700Bold", fontSize: 16, marginTop: 10 },
+  adviceBody: { fontFamily: "Nunito_400Regular", fontSize: 13, lineHeight: 19, marginTop: 5 },
+  adviceCategory: { fontFamily: "Nunito_700Bold", fontSize: 11, marginTop: 9 },
   bannerWrap: {
     height: 150,
     borderRadius: 24,

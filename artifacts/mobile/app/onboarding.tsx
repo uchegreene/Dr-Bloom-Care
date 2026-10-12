@@ -1,477 +1,232 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Switch, Keyboard, Alert } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Redirect } from 'expo-router';
-import { parseISO, isValid, isFuture, differenceInYears } from 'date-fns';
-import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
-import { useProfile, PLAN_PRICES, Subscription, SubscriptionPlan } from '@/hooks/useProfileContext';
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { Redirect } from "expo-router";
+import { differenceInYears, isFuture, isValid, parseISO } from "date-fns";
+import { Feather } from "@expo/vector-icons";
+import { useListPlans } from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { useProfile, type ProfileMode } from "@/hooks/useProfileContext";
 
-const formatNaira = (n: number) => '\u20A6' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-const detectBrand = (digits: string): string => {
-  if (digits.startsWith('5060') || digits.startsWith('5061') || digits.startsWith('650')) return 'Verve';
-  if (digits.startsWith('4')) return 'Visa';
-  if (/^5[1-5]/.test(digits) || /^2[2-7]/.test(digits)) return 'Mastercard';
-  if (/^3[47]/.test(digits)) return 'Amex';
-  return 'Card';
-};
+const money = (amount: number) =>
+  `₦${amount.toLocaleString("en-NG")}`;
 
 export default function Onboarding() {
-  const insets = useSafeAreaInsets();
   const colors = useColors();
   const { completeOnboarding } = useProfile();
-
-  const [step, setStep] = useState<1 | 2>(1);
-
-  const [name, setName] = useState('');
-  const [dob, setDob] = useState('');
-  const [mode, setMode] = useState<'cycle' | 'pregnant' | null>(null);
-
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [autoRenew, setAutoRenew] = useState(true);
-
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const plansQuery = useListPlans();
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
+  const [mode, setMode] = useState<ProfileMode>("none");
+  const [femaleOnlyConfirmed, setFemaleOnlyConfirmed] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  const plan: SubscriptionPlan = mode === 'pregnant' ? 'pregnancy' : 'cycle';
-  const price = PLAN_PRICES[plan];
-  const planName = mode === 'pregnant' ? 'Pregnancy Tracking' : 'Cycle Tracking';
+  if (done) return <Redirect href="/" />;
 
-  const validateDetails = (): string | null => {
-    if (!name.trim()) return 'Please enter your full name.';
-    const parsed = parseISO(dob);
-    if (!dob.trim() || !isValid(parsed)) return 'Please enter your date of birth as YYYY-MM-DD.';
-    if (isFuture(parsed)) return 'Date of birth cannot be in the future.';
-    const age = differenceInYears(new Date(), parsed);
-    if (age < 13) return 'You must be at least 13 years old to use HER BLOOM.';
-    if (age > 120) return 'Please enter a valid date of birth.';
-    if (!mode) return 'Please choose what you would like to track.';
-    return null;
-  };
+  const plan = mode === "pregnant" ? "pregnancy" : "cycle";
+  const price = plansQuery.data?.find((entry) => entry.plan === plan)?.priceNaira;
 
-  const handleContinue = () => {
+  const submit = async () => {
     Keyboard.dismiss();
-    const err = validateDetails();
-    if (err) {
-      setError(err);
-      Alert.alert('Almost there', err);
-      return;
+    const cleanedUsername = username.trim().replace(/^@/, "").toLowerCase();
+    const parsedDate = parseISO(dob.trim());
+    if (!femaleOnlyConfirmed) {
+      return setError("Confirm that Bloom is a women-only community before continuing.");
     }
-    setError(null);
-    setStep(2);
-  };
-
-  const handleCardNumber = (t: string) => {
-    const digits = t.replace(/\D/g, '').slice(0, 19);
-    const grouped = digits.replace(/(.{4})/g, '$1 ').trim();
-    setCardNumber(grouped);
-    if (error) setError(null);
-  };
-
-  const handleExpiry = (t: string) => {
-    const digits = t.replace(/\D/g, '').slice(0, 4);
-    const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-    setExpiry(formatted);
-    if (error) setError(null);
-  };
-
-  const validateCard = (): string | null => {
-    const digits = cardNumber.replace(/\D/g, '');
-    if (!cardName.trim()) return 'Please enter the name on your card.';
-    if (digits.length < 13) return 'Please enter a valid card number.';
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) return 'Please enter the expiry as MM/YY.';
-    const month = parseInt(expiry.slice(0, 2), 10);
-    if (month < 1 || month > 12) return 'Please enter a valid expiry month.';
-    if (!/^\d{3,4}$/.test(cvv)) return 'Please enter a valid CVV.';
-    return null;
-  };
-
-  const handleSubscribe = async () => {
-    Keyboard.dismiss();
-    if (!mode) {
-      setStep(1);
-      return;
+    if (name.trim().length < 2) return setError("Enter your name.");
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanedUsername)) {
+      return setError("Username must be 3–30 letters, numbers, or underscores.");
     }
-    const err = validateCard();
-    if (err) {
-      setError(err);
-      Alert.alert('Check your card details', err);
-      return;
+    if (!isValid(parsedDate) || isFuture(parsedDate)) {
+      return setError("Enter your date of birth as YYYY-MM-DD.");
     }
-    setError(null);
-    setSubmitting(true);
-    const digits = cardNumber.replace(/\D/g, '');
-    const subscription: Subscription = {
-      plan,
-      priceNaira: price,
-      cardBrand: detectBrand(digits),
-      cardLast4: digits.slice(-4),
-      autoRenew,
-      startedAt: new Date().toISOString(),
-      status: 'active',
-    };
+    const age = differenceInYears(new Date(), parsedDate);
+    if (age < 13) return setError("You must be at least 13 years old to use Bloom.");
+    if (age > 120) return setError("Enter a valid date of birth.");
+
+    setError("");
+    setSaving(true);
     try {
-      await completeOnboarding({ name: name.trim(), dateOfBirth: dob.trim(), mode, bio: '', subscription });
+      await completeOnboarding({
+        username: cleanedUsername,
+        name: name.trim(),
+        dateOfBirth: dob.trim(),
+        bio: "",
+        femaleOnlyConfirmed: true,
+        mode,
+      });
       setDone(true);
-    } catch (e) {
-      setSubmitting(false);
-      const detail = e instanceof Error ? e.message : String(e);
-      setError(detail);
-      Alert.alert('Something went wrong', detail);
+    } catch (cause) {
+      const status = (cause as { status?: number }).status;
+      setError(
+        status === 409
+          ? "That username is already taken. Try another."
+          : "We couldn't save your profile. Check your connection and try again.",
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const detailsValid = !!name.trim() && !!dob.trim() && !!mode;
-
-  if (done) {
-    return <Redirect href={mode === 'pregnant' ? '/(tabs)/pregnancy' : '/(tabs)/cycle'} />;
-  }
+  const options: { key: ProfileMode; title: string; detail: string; icon: keyof typeof Feather.glyphMap }[] = [
+    { key: "cycle", title: "Cycle tracking", detail: "Period and cycle insights", icon: "calendar" },
+    { key: "pregnant", title: "Pregnancy care", detail: "Pregnancy tracking and guidance", icon: "heart" },
+    { key: "none", title: "Browse for now", detail: "Read community posts for free", icon: "users" },
+  ];
 
   return (
     <KeyboardAvoidingView
       behavior="padding"
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.flex, { backgroundColor: colors.background }]}
     >
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: (Platform.OS === 'web' ? 48 : insets.top) + 24, paddingBottom: (Platform.OS === 'web' ? 48 : insets.bottom) + 24 },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      showsVerticalScrollIndicator={false}
-    >
-      {step === 1 ? (
-        <>
-          <Text style={[styles.title, { color: colors.foreground }]}>Welcome to HER BLOOM</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>A safe, warm place for your body and your journey. Let's set up your account.</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.mark, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.markText, { color: colors.primary }]}>B</Text>
+        </View>
+        <Text style={[styles.title, { color: colors.foreground }]}>Finish your profile</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          Your account is free. You can read community posts now; tracking and publishing need an active plan.
+        </Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Full name</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="Your full name"
-              placeholderTextColor={colors.mutedForeground}
-              value={name}
-              onChangeText={(t) => { setName(t); if (error) setError(null); }}
-              autoCapitalize="words"
-            />
-          </View>
+        <TouchableOpacity
+          onPress={() => { setFemaleOnlyConfirmed((value) => !value); setError(""); }}
+          style={[styles.attestation, { borderColor: femaleOnlyConfirmed ? colors.primary : colors.border, backgroundColor: colors.card }]}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: femaleOnlyConfirmed }}
+        >
+          <Feather
+            name={femaleOnlyConfirmed ? "check-square" : "square"}
+            size={21}
+            color={femaleOnlyConfirmed ? colors.primary : colors.mutedForeground}
+          />
+          <Text style={[styles.attestationText, { color: colors.foreground }]}>
+            I identify as a woman and understand Bloom is a women-only community.
+          </Text>
+        </TouchableOpacity>
 
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Date of birth</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.mutedForeground}
-              value={dob}
-              onChangeText={(t) => { setDob(t); if (error) setError(null); }}
-              keyboardType="numbers-and-punctuation"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+        <Text style={[styles.label, { color: colors.foreground }]}>Public username</Text>
+        <TextInput
+          value={username}
+          onChangeText={(value) => { setUsername(value); setError(""); }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="e.g. bloom_member"
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+        />
+        <Text style={[styles.label, { color: colors.foreground }]}>Name</Text>
+        <TextInput
+          value={name}
+          onChangeText={(value) => { setName(value); setError(""); }}
+          textContentType="name"
+          placeholder="Your name"
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+        />
+        <Text style={[styles.label, { color: colors.foreground }]}>Date of birth</Text>
+        <TextInput
+          value={dob}
+          onChangeText={(value) => { setDob(value); setError(""); }}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.mutedForeground}
+          keyboardType="numbers-and-punctuation"
+          style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+        />
 
-          <Text style={[styles.label, { color: colors.foreground }]}>What are you tracking?</Text>
-          <View style={styles.modeContainer}>
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                { borderColor: mode === 'cycle' ? colors.primary : colors.border, backgroundColor: mode === 'cycle' ? colors.secondary : colors.card }
-              ]}
-              onPress={() => { setMode('cycle'); if (error) setError(null); }}
-            >
-              <Text style={[styles.modeText, { color: mode === 'cycle' ? colors.primary : colors.foreground }]}>My Cycle</Text>
-              <Text style={[styles.modePrice, { color: colors.mutedForeground }]}>{formatNaira(PLAN_PRICES.cycle)}/mo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                { borderColor: mode === 'pregnant' ? colors.primary : colors.border, backgroundColor: mode === 'pregnant' ? colors.secondary : colors.card }
-              ]}
-              onPress={() => { setMode('pregnant'); if (error) setError(null); }}
-            >
-              <Text style={[styles.modeText, { color: mode === 'pregnant' ? colors.primary : colors.foreground }]}>My Pregnancy</Text>
-              <Text style={[styles.modePrice, { color: colors.mutedForeground }]}>{formatNaira(PLAN_PRICES.pregnancy)}/mo</Text>
-            </TouchableOpacity>
-          </View>
+        <Text style={[styles.label, styles.modeHeading, { color: colors.foreground }]}>Choose a starting mode</Text>
+        <View style={styles.options}>
+          {options.map((option) => {
+            const selected = mode === option.key;
+            const optionPlan = option.key === "pregnant" ? "pregnancy" : "cycle";
+            const optionPrice = option.key === "none"
+              ? null
+              : plansQuery.data?.find((entry) => entry.plan === optionPlan)?.priceNaira;
+            return (
+              <TouchableOpacity
+                key={option.key}
+                onPress={() => setMode(option.key)}
+                style={[
+                  styles.option,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: selected ? colors.primary : colors.border,
+                    borderWidth: selected ? 2 : 1,
+                  },
+                ]}
+              >
+                <Feather name={option.icon} size={20} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.optionTitle, { color: colors.foreground }]}>{option.title}</Text>
+                  <Text style={[styles.optionDetail, { color: colors.mutedForeground }]}>{option.detail}</Text>
+                </View>
+                {optionPrice != null && (
+                  <Text style={[styles.price, { color: colors.primary }]}>{money(optionPrice)}/mo</Text>
+                )}
+                {selected && <Feather name="check-circle" size={19} color={colors.primary} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-          {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
+        {mode !== "none" && (
+          <Text style={[styles.note, { color: colors.mutedForeground }]}>
+            {price == null
+              ? "Current monthly plan price is loading."
+              : `${money(price)} per month. No payment is collected during signup. An administrator must confirm external payment to activate tracking.`}
+          </Text>
+        )}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <View style={styles.spacer} />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: detailsValid ? colors.primary : colors.muted }]}
-            onPress={handleContinue}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Continue</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <TouchableOpacity style={styles.backRow} onPress={() => { setStep(1); setError(null); }} hitSlop={8}>
-            <Feather name="arrow-left" size={22} color={colors.foreground} />
-            <Text style={[styles.backText, { color: colors.foreground }]}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.title, { color: colors.foreground }]}>Choose your plan</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Unlock {planName.toLowerCase()} with a monthly membership.</Text>
-
-          <View style={[styles.planCard, { backgroundColor: colors.secondary, borderColor: colors.primary }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.planName, { color: colors.foreground }]}>{planName}</Text>
-              <Text style={[styles.planDesc, { color: colors.mutedForeground }]}>Billed monthly. Cancel anytime.</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.planPrice, { color: colors.primary }]}>{formatNaira(price)}</Text>
-              <Text style={[styles.planPer, { color: colors.mutedForeground }]}>per month</Text>
-            </View>
-          </View>
-
-          <Text style={[styles.sectionLabel, { color: colors.foreground }]}>Payment details</Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Name on card</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="Full name"
-              placeholderTextColor={colors.mutedForeground}
-              value={cardName}
-              onChangeText={(t) => { setCardName(t); if (error) setError(null); }}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Card number</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="1234 5678 9012 3456"
-              placeholderTextColor={colors.mutedForeground}
-              value={cardNumber}
-              onChangeText={handleCardNumber}
-              keyboardType="number-pad"
-            />
-          </View>
-
-          <View style={styles.cardRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.label, { color: colors.foreground }]}>Expiry</Text>
-              <TextInput
-                style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-                placeholder="MM/YY"
-                placeholderTextColor={colors.mutedForeground}
-                value={expiry}
-                onChangeText={handleExpiry}
-                keyboardType="number-pad"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.label, { color: colors.foreground }]}>CVV</Text>
-              <TextInput
-                style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-                placeholder="123"
-                placeholderTextColor={colors.mutedForeground}
-                value={cvv}
-                onChangeText={(t) => { setCvv(t.replace(/\D/g, '').slice(0, 4)); if (error) setError(null); }}
-                keyboardType="number-pad"
-                secureTextEntry
-              />
-            </View>
-          </View>
-
-          <View style={[styles.renewRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.renewTitle, { color: colors.foreground }]}>Auto-renew monthly</Text>
-              <Text style={[styles.renewDesc, { color: colors.mutedForeground }]}>Your plan renews automatically each month.</Text>
-            </View>
-            <Switch
-              value={autoRenew}
-              onValueChange={setAutoRenew}
-              trackColor={{ true: colors.primary, false: colors.border }}
-              thumbColor={colors.card}
-            />
-          </View>
-
-          <View style={styles.secureRow}>
-            <Feather name="lock" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.secureText, { color: colors.mutedForeground }]}>
-              Demo only. No real payment is taken and your full card number is never stored.
-            </Text>
-          </View>
-
-          {error && <Text style={[styles.error, { color: colors.primary }]}>{error}</Text>}
-
-          <View style={styles.spacer} />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary, opacity: submitting ? 0.7 : 1 }]}
-            onPress={handleSubscribe}
-            activeOpacity={0.85}
-            disabled={submitting}
-          >
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{submitting ? 'Setting up...' : 'Subscribe & Begin Journey'}</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </ScrollView>
+        <TouchableOpacity
+          onPress={submit}
+          disabled={saving}
+          style={[styles.button, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}
+        >
+          {saving ? <ActivityIndicator color={colors.primaryForeground} /> : null}
+          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+            {saving ? "Saving…" : "Continue to Bloom"}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  input: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-  },
-  modeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modeButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  modeText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 16,
-  },
-  modePrice: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  error: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14,
-    marginTop: 16,
-  },
-  spacer: {
-    height: 32,
-  },
-  button: {
-    borderRadius: 30,
-    padding: 18,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  backText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 16,
-  },
-  planCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 28,
-  },
-  planName: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  planDesc: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  planPrice: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 22,
-  },
-  planPer: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sectionLabel: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-    marginBottom: 16,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  renewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-  },
-  renewTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
-  renewDesc: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  secureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-  },
-  secureText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 12,
-    flex: 1,
-    lineHeight: 17,
-  },
+  flex: { flex: 1 },
+  content: { paddingHorizontal: 22, paddingTop: 38, paddingBottom: 45 },
+  mark: { width: 52, height: 52, borderRadius: 18, alignItems: "center", justifyContent: "center", alignSelf: "center" },
+  markText: { fontFamily: "Nunito_700Bold", fontSize: 29 },
+  title: { fontFamily: "Nunito_700Bold", fontSize: 27, textAlign: "center", marginTop: 16 },
+  subtitle: { fontFamily: "Nunito_400Regular", fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 8, marginBottom: 18 },
+  label: { fontFamily: "Nunito_600SemiBold", fontSize: 14, marginTop: 14, marginBottom: 7 },
+  input: { minHeight: 50, borderWidth: 1, borderRadius: 13, paddingHorizontal: 14, fontFamily: "Nunito_400Regular", fontSize: 16 },
+  modeHeading: { marginTop: 24 },
+  options: { gap: 9 },
+  attestation: { flexDirection: "row", gap: 10, alignItems: "center", borderWidth: 1, borderRadius: 13, padding: 12, marginBottom: 5 },
+  attestationText: { flex: 1, fontFamily: "Nunito_600SemiBold", fontSize: 13, lineHeight: 19 },
+  option: { minHeight: 66, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+  optionTitle: { fontFamily: "Nunito_700Bold", fontSize: 14 },
+  optionDetail: { fontFamily: "Nunito_400Regular", fontSize: 12, marginTop: 2 },
+  price: { fontFamily: "Nunito_700Bold", fontSize: 12 },
+  note: { fontFamily: "Nunito_400Regular", fontSize: 13, lineHeight: 19, marginTop: 12 },
+  error: { color: "#B42318", fontFamily: "Nunito_600SemiBold", fontSize: 14, marginTop: 14 },
+  button: { minHeight: 52, borderRadius: 14, marginTop: 22, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center" },
+  buttonText: { fontFamily: "Nunito_700Bold", fontSize: 16 },
 });

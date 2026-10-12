@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs, usePathname } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
@@ -7,7 +7,15 @@ import { Platform } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { useProfile } from "@/hooks/useProfileContext";
 
-function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone: boolean }) {
+function ClassicTabLayout({
+  canUseCycle,
+  canUsePregnancy,
+  canChat,
+}: {
+  canUseCycle: boolean;
+  canUsePregnancy: boolean;
+  canChat: boolean;
+}) {
   const colors = useColors();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -29,7 +37,7 @@ function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone:
         name="cycle"
         options={{
           title: "Cycle",
-          href: !isPregnant && !isNone ? "/(tabs)/cycle" : null,
+          href: canUseCycle ? "/(tabs)/cycle" : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="calendar" tintColor={color} size={24} />
@@ -42,7 +50,7 @@ function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone:
         name="pregnancy"
         options={{
           title: "Pregnancy",
-          href: isPregnant && !isNone ? "/(tabs)/pregnancy" : null,
+          href: canUsePregnancy ? "/(tabs)/pregnancy" : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="heart" tintColor={color} size={24} />
@@ -67,6 +75,7 @@ function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone:
         name="chat"
         options={{
           title: "Chat",
+          href: canChat ? "/(tabs)/chat" : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="message" tintColor={color} size={24} />
@@ -100,8 +109,33 @@ function ClassicTabLayout({ isPregnant, isNone }: { isPregnant: boolean; isNone:
 
 export default function TabLayout() {
   const { profile } = useProfile();
-  const isPregnant = profile?.mode === "pregnant";
-  const isNone = profile?.mode === "none";
+  const pathname = usePathname();
+  const canUseCycle =
+    profile?.subscriptionActive === true &&
+    profile.subscriptionPlan === "cycle" &&
+    profile.mode === "cycle";
+  const canUsePregnancy =
+    profile?.subscriptionActive === true &&
+    profile.subscriptionPlan === "pregnancy" &&
+    profile.mode === "pregnant";
+  const canChat = profile?.subscriptionActive === true;
 
-  return <ClassicTabLayout isPregnant={isPregnant} isNone={isNone} />;
+  if (!profile?.profileComplete) return <Redirect href="/" />;
+  if (pathname.endsWith("/cycle") && !canUseCycle) {
+    return <Redirect href="/(tabs)/community" />;
+  }
+  if (pathname.endsWith("/pregnancy") && !canUsePregnancy) {
+    return <Redirect href="/(tabs)/community" />;
+  }
+  if (pathname.endsWith("/chat") && !canChat) {
+    return <Redirect href="/(tabs)/community" />;
+  }
+
+  return (
+    <ClassicTabLayout
+      canUseCycle={canUseCycle}
+      canUsePregnancy={canUsePregnancy}
+      canChat={canChat}
+    />
+  );
 }

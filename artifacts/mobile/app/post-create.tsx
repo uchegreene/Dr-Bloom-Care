@@ -13,8 +13,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocial } from '@/hooks/useSocialContext';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useProfile } from '@/hooks/useProfileContext';
 
 const TAGS = ['Journey', 'Advice', 'Health'];
 
@@ -23,6 +24,7 @@ export default function PostCreate() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { addPost } = useSocial();
+  const { profile } = useProfile();
 
   const [text, setText] = useState('');
   const [tag, setTag] = useState<string | undefined>(undefined);
@@ -46,11 +48,14 @@ export default function PostCreate() {
   };
 
   const handlePost = async () => {
+    if (!profile?.subscriptionActive) return;
     const trimmed = text.trim();
     if (!trimmed && !imageUri) return;
     await addPost(trimmed, tag, imageUri);
     router.back();
   };
+
+  if (!profile?.subscriptionActive) return <Redirect href="/(tabs)/community" />;
 
   return (
     <KeyboardAvoidingView

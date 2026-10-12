@@ -5,6 +5,8 @@ import {
   useFonts,
 } from "@expo-google-fonts/nunito";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/expo";
+import * as SecureStore from "expo-secure-store";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
@@ -16,6 +18,20 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Mock contexts (we will implement them next)
 import { AppProviders } from "@/components/Providers";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { setStorageUserScope } from "@/lib/scopedAsyncStorage";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const tokenCache = {
+  async getToken(key: string) {
+    return SecureStore.getItemAsync(key);
+  },
+  async saveToken(key: string, value: string) {
+    await SecureStore.setItemAsync(key, value);
+  },
+};
+
+setBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL ?? null);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +40,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="cycle-log" options={{ headerShown: false, presentation: "modal" }} />
@@ -33,8 +50,25 @@ function RootLayoutNav() {
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="health-tips" options={{ headerShown: false, presentation: "modal" }} />
     </Stack>
+  );
+}
+
+function AuthenticatedApp() {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  setStorageUserScope(isSignedIn ? userId : null);
+
+  useEffect(() => {
+    setAuthTokenGetter(isLoaded ? () => getToken() : null);
+    return () => setAuthTokenGetter(null);
+  }, [getToken, isLoaded]);
+
+  return (
+    <AppProviders key={isSignedIn ? userId ?? "signed-in" : "signed-out"}>
+      <RootLayoutNav />
+    </AppProviders>
   );
 }
 
@@ -59,9 +93,15 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView>
             <KeyboardProvider>
-              <AppProviders>
-                <RootLayoutNav />
-              </AppProviders>
+              <ClerkProvider
+                publishableKey={publishableKey}
+                tokenCache={tokenCache}
+                proxyUrl={process.env.EXPO_PUBLIC_CLERK_PROXY_URL}
+              >
+                <ClerkLoaded>
+                  <AuthenticatedApp />
+                </ClerkLoaded>
+              </ClerkProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

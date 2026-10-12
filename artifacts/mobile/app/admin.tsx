@@ -1,0 +1,405 @@
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Redirect, useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import {
+  useCreateAdvice,
+  useCreateAdvisor,
+  useGrantMembership,
+  useListAdminAdvisors,
+  useListAdminMembers,
+  useListPlans,
+  useUpdatePlanPrice,
+} from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { useProfile } from "@/hooks/useProfileContext";
+
+const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
+const CATEGORIES = [
+  "Cycle health",
+  "Pregnancy",
+  "Sexual health",
+  "Newborn care",
+  "General",
+] as const;
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  keyboardType?: "default" | "number-pad";
+}) {
+  const colors = useColors();
+  return (
+    <View style={{ marginTop: 12 }}>
+      <Text style={[styles.label, { color: colors.mutedForeground }]}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.mutedForeground}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        style={[
+          styles.input,
+          multiline && styles.multiline,
+          { color: colors.foreground, backgroundColor: colors.background, borderColor: colors.border },
+        ]}
+      />
+    </View>
+  );
+}
+
+export default function AdminScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const { profile } = useProfile();
+  const isAdmin = profile?.role === "admin";
+  const plansQuery = useListPlans();
+  const membersQuery = useListAdminMembers({ query: { enabled: isAdmin, retry: false } });
+  const advisorsQuery = useListAdminAdvisors({ query: { enabled: isAdmin, retry: false } });
+  const updatePlan = useUpdatePlanPrice();
+  const createAdvisor = useCreateAdvisor();
+  const createAdvice = useCreateAdvice();
+  const grantMembership = useGrantMembership();
+  const [cyclePrice, setCyclePrice] = useState("");
+  const [pregnancyPrice, setPregnancyPrice] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [advisorName, setAdvisorName] = useState("");
+  const [advisorTitle, setAdvisorTitle] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [credentials, setCredentials] = useState("");
+  const [advisorBio, setAdvisorBio] = useState("");
+  const [credentialsVerified, setCredentialsVerified] = useState(false);
+  const [selectedAdvisor, setSelectedAdvisor] = useState<number | null>(null);
+  const [adviceTitle, setAdviceTitle] = useState("");
+  const [adviceBody, setAdviceBody] = useState("");
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("General");
+
+  useEffect(() => {
+    if (!plansQuery.data) return;
+    const cycle = plansQuery.data.find((plan) => plan.plan === "cycle");
+    const pregnancy = plansQuery.data.find((plan) => plan.plan === "pregnancy");
+    if (cycle) setCyclePrice(String(cycle.priceNaira));
+    if (pregnancy) setPregnancyPrice(String(pregnancy.priceNaira));
+  }, [plansQuery.data]);
+
+  if (profile?.role !== "admin") return <Redirect href="/" />;
+
+  const refreshAdminData = async () => {
+    await Promise.all([
+      plansQuery.refetch(),
+      membersQuery.refetch(),
+      advisorsQuery.refetch(),
+    ]);
+  };
+
+  const savePrice = async (plan: "cycle" | "pregnancy", value: string) => {
+    const priceNaira = Number(value);
+    if (!Number.isSafeInteger(priceNaira) || priceNaira < 0) {
+      setFeedback("Enter a whole-number monthly price in naira.");
+      return;
+    }
+    try {
+      await updatePlan.mutateAsync({ plan, data: { priceNaira } });
+      await plansQuery.refetch();
+      setFeedback(`${plan === "cycle" ? "Cycle" : "Pregnancy"} fee saved.`);
+    } catch {
+      setFeedback("Could not save the fee. Check your connection and try again.");
+    }
+  };
+
+  const saveAdvisor = async () => {
+    if (!credentialsVerified) {
+      setFeedback("Confirm the advisor’s identity and credentials before assigning a verified badge.");
+      return;
+    }
+    try {
+      await createAdvisor.mutateAsync({
+        data: {
+          name: advisorName.trim(),
+          title: advisorTitle.trim(),
+          specialty: specialty.trim(),
+          credentials: credentials.trim(),
+          bio: advisorBio.trim(),
+          credentialsVerified: true,
+        },
+      });
+      setAdvisorName("");
+      setAdvisorTitle("");
+      setSpecialty("");
+      setCredentials("");
+      setAdvisorBio("");
+      setCredentialsVerified(false);
+      setFeedback("Verified advisor profile added.");
+      await advisorsQuery.refetch();
+    } catch {
+      setFeedback("Could not add the advisor. Complete all fields and try again.");
+    }
+  };
+
+  const publishAdvice = async () => {
+    if (!selectedAdvisor) {
+      setFeedback("Choose an advisor profile first.");
+      return;
+    }
+    try {
+      await createAdvice.mutateAsync({
+        data: {
+          advisorId: selectedAdvisor,
+          title: adviceTitle.trim(),
+          body: adviceBody.trim(),
+          category,
+        },
+      });
+      setAdviceTitle("");
+      setAdviceBody("");
+      setFeedback("Advice published to the member feed.");
+    } catch {
+      setFeedback("Could not publish advice. Check the fields and try again.");
+    }
+  };
+
+  const activatePlan = (member: NonNullable<typeof membersQuery.data>[number]) => {
+    const plan =
+      member.requestedPlan ??
+      (member.mode === "pregnant" ? "pregnancy" : "cycle");
+    const fee = plansQuery.data?.find((entry) => entry.plan === plan)?.priceNaira;
+    Alert.alert(
+      "Verify payment before activation",
+      `Only continue after you have checked the member’s external payment${fee == null ? "" : ` of ${formatNaira(fee)}`}. This activates ${plan} for one month.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Payment checked — activate",
+          onPress: async () => {
+            try {
+              await grantMembership.mutateAsync({
+                userId: member.userId,
+                data: { plan, months: 1, confirmedPayment: true },
+              });
+              setFeedback(`Activated ${plan} for @${member.username || member.email}.`);
+              await membersQuery.refetch();
+            } catch {
+              setFeedback("Could not activate the membership.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <ScrollView
+      style={[styles.page, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.topRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+          <Feather name="arrow-left" size={20} color={colors.foreground} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.foreground }]}>Admin tools</Text>
+      </View>
+      <Text style={[styles.caption, { color: colors.mutedForeground }]}>
+        Fees, manual payment verification, and professional advice publishing.
+      </Text>
+      {feedback ? <Text style={[styles.feedback, { color: colors.primary }]}>{feedback}</Text> : null}
+
+      <Section title="Monthly plan fees">
+        <Field label="Cycle plan (₦)" value={cyclePrice} onChangeText={setCyclePrice} keyboardType="number-pad" />
+        <TouchableOpacity
+          onPress={() => savePrice("cycle", cyclePrice)}
+          disabled={updatePlan.isPending}
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+        >
+          <Text style={[styles.actionText, { color: colors.primaryForeground }]}>Save cycle fee</Text>
+        </TouchableOpacity>
+        <Field label="Pregnancy plan (₦)" value={pregnancyPrice} onChangeText={setPregnancyPrice} keyboardType="number-pad" />
+        <TouchableOpacity
+          onPress={() => savePrice("pregnancy", pregnancyPrice)}
+          disabled={updatePlan.isPending}
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+        >
+          <Text style={[styles.actionText, { color: colors.primaryForeground }]}>Save pregnancy fee</Text>
+        </TouchableOpacity>
+      </Section>
+
+      <Section title="Add a care professional">
+        <Field label="Display name" value={advisorName} onChangeText={setAdvisorName} placeholder="Dr. Amina Okafor" />
+        <Field label="Professional title" value={advisorTitle} onChangeText={setAdvisorTitle} placeholder="Obstetrician & gynaecologist" />
+        <Field label="Specialty" value={specialty} onChangeText={setSpecialty} placeholder="Women’s reproductive health" />
+        <Field label="Credentials" value={credentials} onChangeText={setCredentials} placeholder="Qualifications and license details" />
+        <Field label="Short profile" value={advisorBio} onChangeText={setAdvisorBio} multiline placeholder="A short professional biography" />
+        <TouchableOpacity
+          onPress={() => setCredentialsVerified((value) => !value)}
+          style={styles.checkRow}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: credentialsVerified }}
+        >
+          <Feather name={credentialsVerified ? "check-square" : "square"} size={20} color={colors.primary} />
+          <Text style={[styles.checkText, { color: colors.foreground }]}>
+            I checked this person’s identity and professional credentials; the blue verified badge is accurate.
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={saveAdvisor}
+          disabled={createAdvisor.isPending || !credentialsVerified}
+          style={[styles.actionButton, { backgroundColor: colors.primary, opacity: credentialsVerified ? 1 : 0.55 }]}
+        >
+          <Text style={[styles.actionText, { color: colors.primaryForeground }]}>
+            {createAdvisor.isPending ? "Adding…" : "Add verified profile"}
+          </Text>
+        </TouchableOpacity>
+        {(advisorsQuery.data ?? []).map((advisor) => (
+          <TouchableOpacity
+            key={advisor.id}
+            onPress={() => setSelectedAdvisor(advisor.id)}
+            style={[
+              styles.listRow,
+              { borderColor: selectedAdvisor === advisor.id ? colors.primary : colors.border },
+            ]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>
+                {advisor.name}  {advisor.isVerified ? "✓" : ""}
+              </Text>
+              <Text style={[styles.caption, { color: colors.mutedForeground }]}>
+                {advisor.title} · {advisor.specialty}
+              </Text>
+            </View>
+            <Text style={[styles.selectLabel, { color: colors.primary }]}>
+              {selectedAdvisor === advisor.id ? "Selected" : "Select"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </Section>
+
+      <Section title="Publish professional advice">
+        <Text style={[styles.caption, { color: colors.mutedForeground }]}>
+          New advice appears with the advisor’s name, credentials, and verified badge.
+        </Text>
+        <Field label="Advice title" value={adviceTitle} onChangeText={setAdviceTitle} placeholder="A clear, helpful title" />
+        <Field label="Advice" value={adviceBody} onChangeText={setAdviceBody} multiline placeholder="Write the advice for members…" />
+        <View style={styles.chips}>
+          {CATEGORIES.map((value) => (
+            <TouchableOpacity
+              key={value}
+              onPress={() => setCategory(value)}
+              style={[
+                styles.chip,
+                { backgroundColor: category === value ? colors.primary : colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text style={{ color: category === value ? colors.primaryForeground : colors.foreground, fontFamily: "Nunito_600SemiBold", fontSize: 12 }}>
+                {value}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity
+          onPress={publishAdvice}
+          disabled={createAdvice.isPending || !selectedAdvisor}
+          style={[styles.actionButton, { backgroundColor: colors.primary, opacity: selectedAdvisor ? 1 : 0.55 }]}
+        >
+          <Text style={[styles.actionText, { color: colors.primaryForeground }]}>
+            {createAdvice.isPending ? "Publishing…" : "Publish advice"}
+          </Text>
+        </TouchableOpacity>
+      </Section>
+
+      <Section title="Member payment requests">
+        {membersQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+        {(membersQuery.data ?? []).map((member) => {
+          const requested = member.requestedPlan;
+          const plan = requested ?? (member.mode === "pregnant" ? "pregnancy" : "cycle");
+          return (
+            <View key={member.userId} style={[styles.memberCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>
+                {member.name || member.username || member.email}
+              </Text>
+              <Text style={[styles.caption, { color: colors.mutedForeground }]}>
+                {member.email} · @{member.username || "no username"}
+              </Text>
+              <Text style={[styles.caption, { color: colors.mutedForeground, marginTop: 4 }]}>
+                {requested ? `Requested: ${requested} plan` : "No payment request"} · Status: {member.subscriptionStatus}
+              </Text>
+              {requested && (
+                <TouchableOpacity
+                  onPress={() => activatePlan(member)}
+                  disabled={grantMembership.isPending}
+                  style={[styles.actionButton, { backgroundColor: colors.primary, marginTop: 10 }]}
+                >
+                  <Text style={[styles.actionText, { color: colors.primaryForeground }]}>
+                    Verify payment and activate {plan}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
+        {!membersQuery.isLoading && (membersQuery.data?.length ?? 0) === 0 ? (
+          <Text style={[styles.caption, { color: colors.mutedForeground }]}>No member accounts yet.</Text>
+        ) : null}
+      </Section>
+      <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
+        Bloom does not collect or renew payments. Verify each external payment before granting access.
+      </Text>
+    </ScrollView>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]}>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  content: { padding: 20, paddingBottom: 50 },
+  topRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
+  back: { padding: 4 },
+  title: { fontFamily: "Nunito_700Bold", fontSize: 26 },
+  caption: { fontFamily: "Nunito_400Regular", fontSize: 13, lineHeight: 19, marginTop: 4 },
+  feedback: { fontFamily: "Nunito_700Bold", fontSize: 13, marginTop: 12 },
+  section: { borderWidth: 1, borderRadius: 18, padding: 16, marginTop: 18 },
+  sectionTitle: { fontFamily: "Nunito_700Bold", fontSize: 18 },
+  label: { fontFamily: "Nunito_600SemiBold", fontSize: 13, marginBottom: 6 },
+  input: { minHeight: 46, borderWidth: 1, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, fontFamily: "Nunito_400Regular", fontSize: 14 },
+  multiline: { minHeight: 96, textAlignVertical: "top" },
+  actionButton: { minHeight: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 12, marginTop: 10 },
+  actionText: { fontFamily: "Nunito_700Bold", fontSize: 14, textAlign: "center" },
+  checkRow: { flexDirection: "row", gap: 9, alignItems: "flex-start", marginTop: 14 },
+  checkText: { flex: 1, fontFamily: "Nunito_400Regular", fontSize: 13, lineHeight: 19 },
+  listRow: { borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+  rowTitle: { fontFamily: "Nunito_700Bold", fontSize: 14 },
+  selectLabel: { fontFamily: "Nunito_700Bold", fontSize: 12 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 12 },
+  chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 7 },
+  memberCard: { borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 10 },
+  disclaimer: { fontFamily: "Nunito_400Regular", fontSize: 12, lineHeight: 18, marginTop: 16, textAlign: "center" },
+});

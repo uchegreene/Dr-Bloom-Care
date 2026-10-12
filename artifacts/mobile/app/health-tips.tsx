@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -47,6 +47,11 @@ export default function HealthTipsScreen() {
   const { profile } = useProfile();
   const { getCyclePhase, getRecentSymptoms } = useCycle();
   const { getStats } = usePregnancy();
+  const expectedPlan = profile?.mode === "pregnant" ? "pregnancy" : "cycle";
+  if (
+    !profile?.subscriptionActive ||
+    profile.subscriptionPlan !== expectedPlan
+  ) return <Redirect href="/(tabs)/community" />;
 
   const mode = profile?.mode ?? 'cycle';
   const today = format(new Date(), 'yyyy-MM-dd');

@@ -11,9 +11,10 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePregnancy } from '@/hooks/usePregnancyContext';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useProfile } from '@/hooks/useProfileContext';
 
 const SYMPTOM_OPTIONS = [
   'Nausea',
@@ -31,6 +32,7 @@ export default function PregnancyLog() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { addLog } = usePregnancy();
+  const { profile } = useProfile();
 
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [weight, setWeight] = useState('');
@@ -54,6 +56,12 @@ export default function PregnancyLog() {
   };
 
   const canSave = symptoms.length > 0 || weight.trim() !== '' || notes.trim() !== '';
+
+  if (
+    !profile?.subscriptionActive ||
+    profile.subscriptionPlan !== "pregnancy" ||
+    profile.mode !== "pregnant"
+  ) return <Redirect href="/(tabs)/community" />;
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.container, { backgroundColor: colors.background }]}>

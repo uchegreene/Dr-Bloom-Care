@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useReminders, ReminderType } from '@/hooks/useRemindersContext';
+import { useProfile } from '@/hooks/useProfileContext';
 import { format, parseISO, isValid } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ export default function RemindersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { reminders, addReminder, removeReminder } = useReminders();
+  const { profile } = useProfile();
 
   const [type, setType] = useState<ReminderType>('appointment');
   const [title, setTitle] = useState('');
@@ -62,6 +64,8 @@ export default function RemindersScreen() {
 
   const appointments = reminders.filter(r => r.type === 'appointment').sort((a, b) => (a.datetime || '').localeCompare(b.datetime || ''));
   const medications = reminders.filter(r => r.type === 'medication').sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  if (!profile?.subscriptionActive) return <Redirect href="/(tabs)/community" />;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
