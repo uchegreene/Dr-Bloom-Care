@@ -8,3 +8,4 @@
 - [Medical-team inbox policy](medical-team-policy.md) — paid members tag profiles and DM a shared care team; specialists answer under their own verified identities.
 - [Pregnancy reminder continuity](pregnancy-reminder-policy.md) — mode/billing changes must not silently cancel existing medical alerts; lock-screen details stay generic.
 - [Test-browser memory](test-browser-memory.md) — abandoned Chromium processes can exhaust memory and stall Node startup; check resources before retrying tools.
+- [Password minimum](password-policy.md) — owner requires an eight-character minimum; signup validation and the authentication provider must agree.
