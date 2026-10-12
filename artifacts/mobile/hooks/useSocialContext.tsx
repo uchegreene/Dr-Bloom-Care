@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@/lib/scopedAsyncStorage';
+import { useScopedStorage } from '@/lib/scopedAsyncStorage';
+import { useProfile } from '@/hooks/useProfileContext';
 
 export interface Comment {
   id: string;
@@ -96,6 +97,11 @@ const SEED_POSTS: Post[] = [
 ];
 
 export function SocialProvider({ children }: { children: ReactNode }) {
+  const AsyncStorage = useScopedStorage();
+  const { profile } = useProfile();
+  const requirePaidMembership = () => {
+    if (!profile?.subscriptionActive) throw new Error("An active plan is required to publish or respond.");
+  };
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -104,8 +110,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       if (stored) {
         setPosts(JSON.parse(stored));
       } else {
-        setPosts(SEED_POSTS);
-        AsyncStorage.setItem('bloom_posts_v2', JSON.stringify(SEED_POSTS));
+        setPosts([]);
       }
       setIsLoading(false);
     });
@@ -116,6 +121,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   };
 
   const addPost = async (text: string, tag?: string, imageUri?: string) => {
+    requirePaidMembership();
     const newPost: Post = {
       id: Date.now().toString(),
       authorName: 'You',
@@ -136,6 +142,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   };
 
   const likePost = async (id: string) => {
+    requirePaidMembership();
     setPosts(prev => {
       const updated = prev.map(p =>
         p.id === id
@@ -148,6 +155,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   };
 
   const addComment = async (postId: string, text: string) => {
+    requirePaidMembership();
     const comment: Comment = {
       id: Date.now().toString(),
       authorName: 'You',

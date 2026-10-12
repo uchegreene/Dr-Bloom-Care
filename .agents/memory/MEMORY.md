@@ -1,4 +1,7 @@
 - [Expo context files need .tsx](expo-jsx-context-files.md) — hook/context files that render a JSX Provider must be `.tsx`, not `.ts`, or tsc fails to parse.
 - [Cycle period-start anchoring](cycle-period-anchor.md) — phase/prediction math anchors on the START of the latest consecutive flow run, never the latest logged flow day.
 - [Expo native-tabs break navigation](expo-native-tabs-instability.md) — never use unstable-native-tabs; dynamic/missing triggers kill tab nav on iOS 26. Use classic Tabs + href:null.
-- [Keyboard form button placement](expo-keyboard-button-placement.md) — bottom action buttons inside a ScrollView are untappable on device (keyboard covers them); use keyboard-controller's KeyboardAvoidingView + a fixed footer button.
+- [Onboarding taps and navigation](expo-keyboard-button-placement.md) — keep buttons inside the ScrollView with handled taps; declarative redirects avoid device-only navigation failures.
+- [Membership policy](membership-policy.md) — free read-only accounts, independent mode selection, explicit admin authorization, and manual-payment boundaries.
+- [Artifact service routing](artifact-service-routing.md) — directory names do not define HTTP prefixes; wrong API addresses can return catch-all HTML with a successful status.
+- [Cross-platform confirmations](expo-confirmations.md) — critical confirmations need an in-app modal; React Native Alert can silently do nothing in web previews.

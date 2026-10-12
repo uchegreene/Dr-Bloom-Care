@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@/lib/scopedAsyncStorage';
+import { useScopedStorage } from '@/lib/scopedAsyncStorage';
+import { useProfile } from '@/hooks/useProfileContext';
 import { addDays, differenceInWeeks, differenceInDays, parseISO } from 'date-fns';
 
 export interface PregnancyLog {
@@ -26,6 +27,13 @@ interface PregnancyContextType {
 const PregnancyContext = createContext<PregnancyContextType | null>(null);
 
 export function PregnancyProvider({ children }: { children: ReactNode }) {
+  const AsyncStorage = useScopedStorage();
+  const { profile } = useProfile();
+  const requirePregnancyPlan = () => {
+    if (!profile?.subscriptionActive || profile.subscriptionPlan !== "pregnancy" || profile.mode !== "pregnant") {
+      throw new Error("An active pregnancy plan is required to log pregnancy information.");
+    }
+  };
   const [data, setData] = useState<PregnancyData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,12 +49,14 @@ export function PregnancyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateDates = async (lmpDate?: string, dueDate?: string) => {
+    requirePregnancyPlan();
     const updated = { ...data, lmpDate, dueDate, logs: data?.logs || {} };
     setData(updated);
     await AsyncStorage.setItem('bloom_pregnancy', JSON.stringify(updated));
   };
 
   const addLog = async (log: PregnancyLog) => {
+    requirePregnancyPlan();
     if (!data) return;
     const updatedLogs = { ...data.logs, [log.date]: log };
     const updated = { ...data, logs: updatedLogs };

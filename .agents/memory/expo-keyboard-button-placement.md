@@ -37,9 +37,7 @@ post-state-change navigation in this app.
 - Keep action buttons as the last child INSIDE the `ScrollView`; keep
   `keyboardShouldPersistTaps="handled"`. Do NOT move them to a fixed footer outside
   the scroll — that broke taps on device here.
-- After `completeOnboarding`, navigate via `router.replace('/')` and let
-  `app/index.tsx`'s Redirect route by `profile.mode`. Reuse the launch-time
-  redirect rather than a direct group-route replace.
-- Surface failures with `Alert.alert` (in addition to inline text). In the catch,
-  show the REAL error (`e instanceof Error ? e.message : String(e)`) so a failed
-  tap is never silent and the actual native error is visible.
+- After profile completion, set a success state and render `<Redirect href="/" />`;
+  let the launch-time redirect choose the destination based on mode and entitlement.
+- Surface failures as inline text or a cross-platform in-app modal so failures
+  remain visible in both the web preview and native app.

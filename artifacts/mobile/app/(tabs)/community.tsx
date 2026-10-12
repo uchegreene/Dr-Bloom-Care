@@ -177,7 +177,7 @@ export default function CommunityScreen() {
                 <Text style={[styles.adviceHeading, { color: colors.foreground }]}>
                   Advice from verified professionals
                 </Text>
-                {adviceQuery.data?.slice(0, 6).map((advice) => (
+                {adviceQuery.data?.map((advice) => (
                   <View key={advice.id} style={[styles.adviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.advisorLine}>
                       <Text style={[styles.advisorName, { color: colors.foreground }]}>
@@ -193,7 +193,7 @@ export default function CommunityScreen() {
                       {advice.credentials} · {advice.specialty}
                     </Text>
                     <Text style={[styles.adviceTitle, { color: colors.foreground }]}>{advice.title}</Text>
-                    <Text style={[styles.adviceBody, { color: colors.foreground }]} numberOfLines={5}>
+                    <Text style={[styles.adviceBody, { color: colors.foreground }]}>
                       {advice.body}
                     </Text>
                     <Text style={[styles.adviceCategory, { color: colors.primary }]}>{advice.category}</Text>

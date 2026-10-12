@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -12,6 +10,7 @@ import {
 } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateAdvice,
   useCreateAdvisor,
@@ -22,6 +21,7 @@ import {
   useUpdatePlanPrice,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useConfirmation } from "@/hooks/useConfirmation";
 import { useProfile } from "@/hooks/useProfileContext";
 
 const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
@@ -72,11 +72,12 @@ function Field({
 export default function AdminScreen() {
   const colors = useColors();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const plansQuery = useListPlans();
-  const membersQuery = useListAdminMembers({ query: { enabled: isAdmin, retry: false } });
-  const advisorsQuery = useListAdminAdvisors({ query: { enabled: isAdmin, retry: false } });
+  const membersQuery = useListAdminMembers({ query: { queryKey: ["/admin/members"], enabled: isAdmin, retry: false } });
+  const advisorsQuery = useListAdminAdvisors({ query: { queryKey: ["/admin/advisors"], enabled: isAdmin, retry: false } });
   const updatePlan = useUpdatePlanPrice();
   const createAdvisor = useCreateAdvisor();
   const createAdvice = useCreateAdvice();
@@ -84,6 +85,7 @@ export default function AdminScreen() {
   const [cyclePrice, setCyclePrice] = useState("");
   const [pregnancyPrice, setPregnancyPrice] = useState("");
   const [feedback, setFeedback] = useState("");
+  const { confirm, confirmationDialog } = useConfirmation();
   const [advisorName, setAdvisorName] = useState("");
   const [advisorTitle, setAdvisorTitle] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -104,14 +106,6 @@ export default function AdminScreen() {
   }, [plansQuery.data]);
 
   if (profile?.role !== "admin") return <Redirect href="/" />;
-
-  const refreshAdminData = async () => {
-    await Promise.all([
-      plansQuery.refetch(),
-      membersQuery.refetch(),
-      advisorsQuery.refetch(),
-    ]);
-  };
 
   const savePrice = async (plan: "cycle" | "pregnancy", value: string) => {
     const priceNaira = Number(value);
@@ -174,38 +168,33 @@ export default function AdminScreen() {
       setAdviceTitle("");
       setAdviceBody("");
       setFeedback("Advice published to the member feed.");
+      await queryClient.invalidateQueries();
     } catch {
       setFeedback("Could not publish advice. Check the fields and try again.");
     }
   };
 
-  const activatePlan = (member: NonNullable<typeof membersQuery.data>[number]) => {
+  const activatePlan = async (member: NonNullable<typeof membersQuery.data>[number]) => {
     const plan =
       member.requestedPlan ??
       (member.mode === "pregnant" ? "pregnancy" : "cycle");
     const fee = plansQuery.data?.find((entry) => entry.plan === plan)?.priceNaira;
-    Alert.alert(
+    const accepted = await confirm(
       "Verify payment before activation",
       `Only continue after you have checked the member’s external payment${fee == null ? "" : ` of ${formatNaira(fee)}`}. This activates ${plan} for one month.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Payment checked — activate",
-          onPress: async () => {
-            try {
-              await grantMembership.mutateAsync({
-                userId: member.userId,
-                data: { plan, months: 1, confirmedPayment: true },
-              });
-              setFeedback(`Activated ${plan} for @${member.username || member.email}.`);
-              await membersQuery.refetch();
-            } catch {
-              setFeedback("Could not activate the membership.");
-            }
-          },
-        },
-      ],
+      "Payment checked — activate",
     );
+    if (!accepted) return;
+    try {
+      await grantMembership.mutateAsync({
+        userId: member.userId,
+        data: { plan, months: 1, confirmedPayment: true },
+      });
+      setFeedback(`Activated ${plan} for @${member.username || member.email}.`);
+      await queryClient.invalidateQueries();
+    } catch {
+      setFeedback("Could not activate the membership.");
+    }
   };
 
   return (
@@ -224,6 +213,11 @@ export default function AdminScreen() {
         Fees, manual payment verification, and professional advice publishing.
       </Text>
       {feedback ? <Text style={[styles.feedback, { color: colors.primary }]}>{feedback}</Text> : null}
+      {membersQuery.error || advisorsQuery.error || plansQuery.error ? (
+        <Text style={[styles.feedback, { color: "#B42318" }]}>
+          Could not load admin data. Check your connection and reopen this page.
+        </Text>
+      ) : null}
 
       <Section title="Monthly plan fees">
         <Field label="Cycle plan (₦)" value={cyclePrice} onChangeText={setCyclePrice} keyboardType="number-pad" />
@@ -364,6 +358,7 @@ export default function AdminScreen() {
       <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
         Bloom does not collect or renew payments. Verify each external payment before granting access.
       </Text>
+      {confirmationDialog}
     </ScrollView>
   );
 }

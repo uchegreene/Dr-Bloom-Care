@@ -140,7 +140,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     ...process.env,
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
     EXPO_PUBLIC_API_BASE_URL:
-      process.env.EXPO_PUBLIC_API_BASE_URL || `https://${expoPublicDomain}/api-server`,
+      process.env.EXPO_PUBLIC_API_BASE_URL || `https://${expoPublicDomain}`,
     EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
       process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
       process.env.CLERK_PUBLISHABLE_KEY ||

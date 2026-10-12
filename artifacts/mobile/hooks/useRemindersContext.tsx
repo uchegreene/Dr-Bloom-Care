@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@/lib/scopedAsyncStorage';
+import { useScopedStorage } from '@/lib/scopedAsyncStorage';
+import { useProfile } from '@/hooks/useProfileContext';
 
 export type ReminderType = 'appointment' | 'medication';
 
@@ -73,6 +74,8 @@ async function cancelNotification(notificationId?: string) {
 }
 
 export function RemindersProvider({ children }: { children: ReactNode }) {
+  const AsyncStorage = useScopedStorage();
+  const { profile } = useProfile();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -103,6 +106,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   };
 
   const addReminder = async (r: NewReminder) => {
+    if (!profile?.subscriptionActive) throw new Error("An active plan is required to create reminders.");
     const id = Date.now().toString() + Math.random().toString(36).slice(2, 8);
     const base: Reminder = { ...r, id };
     const notificationId = await scheduleNotification(base);

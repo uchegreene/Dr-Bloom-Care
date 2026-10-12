@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,10 +11,11 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useListPlans, useRequestSubscription } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useConfirmation } from "@/hooks/useConfirmation";
 import { useProfile, type ProfileMode, type SubscriptionPlan } from "@/hooks/useProfileContext";
 
 const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
@@ -44,6 +44,8 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const { confirm, confirmationDialog } = useConfirmation();
 
   useEffect(() => {
     setName(profile?.name ?? "");
@@ -95,32 +97,28 @@ export default function ProfileScreen() {
     }
   };
 
-  const requestActivation = () => {
+  const requestActivation = async () => {
     if (!selectedPlan || selectedFee == null) return;
-    Alert.alert(
+    const accepted = await confirm(
       "Confirm external payment",
       `Bloom does not take payment in the app. Only continue after paying ${formatNaira(selectedFee)} outside Bloom. An administrator will verify your payment before activating ${selectedPlan === "cycle" ? "cycle" : "pregnancy"} tracking.`,
-      [
-        { text: "Not yet", style: "cancel" },
-        {
-          text: "I have paid",
-          onPress: async () => {
-            try {
-              await requestMutation.mutateAsync({ data: { plan: selectedPlan } });
-              await refreshAccount();
-              Alert.alert("Request sent", "An administrator can now review your activation request.");
-            } catch {
-              Alert.alert("Not sent", "We could not send the request. Check your connection and try again.");
-            }
-          },
-        },
-      ],
+      "I have paid",
+      "Not yet",
     );
+    if (!accepted) return;
+    try {
+      await requestMutation.mutateAsync({ data: { plan: selectedPlan } });
+      await refreshAccount();
+      setNotice("Request sent. An administrator can now review your activation request.");
+      setError("");
+    } catch {
+      setError("We could not send the request. Check your connection and try again.");
+    }
   };
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace("/(auth)/sign-in");
+    router.replace("/(auth)/sign-in" as Href);
   };
 
   return (
@@ -238,6 +236,12 @@ export default function ProfileScreen() {
         style={[styles.input, styles.bio, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {notice ? <Text style={[styles.error, { color: colors.primary }]}>{notice}</Text> : null}
+      {profile?.requestedPlan ? (
+        <Text style={[styles.error, { color: colors.mutedForeground }]}>
+          Pending {profile.requestedPlan} activation request. Access starts only after the administrator verifies your payment.
+        </Text>
+      ) : null}
       <TouchableOpacity
         onPress={save}
         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -281,7 +285,7 @@ export default function ProfileScreen() {
 
       {profile?.role === "admin" && (
         <TouchableOpacity
-          onPress={() => router.push("/admin")}
+          onPress={() => router.push("/admin" as Href)}
           style={[styles.primaryButton, { backgroundColor: colors.primary, marginTop: 24 }]}
         >
           <Feather name="settings" size={18} color={colors.primaryForeground} />
@@ -294,6 +298,7 @@ export default function ProfileScreen() {
         <Feather name="log-out" size={17} color={colors.mutedForeground} />
         <Text style={[styles.signOutText, { color: colors.mutedForeground }]}>Sign out</Text>
       </TouchableOpacity>
+      {confirmationDialog}
     </ScrollView>
   );
 }

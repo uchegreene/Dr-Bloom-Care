@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, type Href } from "expo-router";
 import { useProfile } from "@/hooks/useProfileContext";
 import { View, ActivityIndicator, Text, TouchableOpacity } from "react-native";
 import { useColors } from "@/hooks/useColors";
@@ -18,7 +18,7 @@ export default function Index() {
   }
 
   if (!isSignedIn) {
-    return <Redirect href="/(auth)/sign-in" />;
+    return <Redirect href={"/(auth)/sign-in" as Href} />;
   }
 
   if (profileError) {

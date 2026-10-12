@@ -1,10 +1,10 @@
 # HER BLOOM
 
-A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, a pregnancy tracker, a community feed, and 1:1 chat. Frontend-only with AsyncStorage persistence. Onboarding registers users with full name and date of birth (DOB stored as `YYYY-MM-DD`, validated for age 13–120).
+A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, a pregnancy tracker, a community feed, and 1:1 chat. Clerk handles email/password accounts; the API and PostgreSQL store profiles, plans, membership requests, and verified professional advice. Private tracker data and the existing member social/chat features remain account-scoped on-device storage. Onboarding collects a public username, full name, date of birth (DOB stored as `YYYY-MM-DD`, age 13–120), and women-only self-attestation.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server on its configured `PORT`
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -24,13 +24,13 @@ A warm, supportive Expo (React Native) mobile app for women, mothers, and mother
 
 - App code: `artifacts/mobile` (Expo, expo-router file-based routing)
 - Screens: `artifacts/mobile/app` — `(tabs)/` holds the tab screens (cycle, pregnancy, community, chat, profile); modals and detail routes at the app root (`onboarding`, `cycle-log`, `pregnancy-log`, `post-create`, `post/[id]`, `chat/[id]`)
-- State + persistence: `artifacts/mobile/hooks/use*Context.tsx` — one AsyncStorage-backed React context per domain (Cycle, Pregnancy, Social, Chat, Profile)
+- State + persistence: `artifacts/mobile/hooks/use*Context.tsx` — private Cycle, Pregnancy, Social, Chat, and Reminder data uses account-scoped on-device storage; Profile uses authenticated API queries.
 - Theme: `artifacts/mobile/constants/colors.ts` (coral/blush/sage palette, light + dark, radius 16); read via `hooks/useColors.ts`
 - Shared Calendar UI: `artifacts/mobile/components/Calendar.tsx`
 
 ## Architecture decisions
 
-- Frontend-only by design: all data lives in AsyncStorage; there is no backend for app features. The `api-server` artifact is unrelated scaffolding.
+- App accounts, membership requests, configurable plan fees, and verified professional advice use the API server and PostgreSQL. Existing member social/chat and personal tracking features remain on-device; do not describe those as cross-device or real-time.
 - Context files that render JSX providers are `.tsx` (not `.ts`), or `tsc` fails to parse the JSX.
 - Tab set is conditional on `profile.mode`: `cycle` shows the Cycle tab, `pregnant` shows the Pregnancy tab, `none` ("Just Browsing") hides both and lands on Community. Both the root redirect (`app/index.tsx`) and the tab layout branch on this.
 - Pregnancy EDD uses Naegele's rule (LMP + 280 days) in `usePregnancyContext`; recomputed on every date edit.

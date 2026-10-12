@@ -376,7 +376,7 @@ router.post(
       });
       return;
     }
-    const userId = req.params.userId;
+    const userId = String(req.params.userId);
     const [account] = await db
       .select()
       .from(bloomAccountsTable)

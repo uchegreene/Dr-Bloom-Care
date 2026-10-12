@@ -8,14 +8,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSignUp } from "@clerk/expo";
-import { Link, type Href, useRouter } from "expo-router";
+import { useAuth, useSignUp } from "@clerk/expo";
+import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 
 export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const { signUp, errors, fetchStatus } = useSignUp();
+  const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -62,6 +63,8 @@ export default function SignUpScreen() {
       },
     });
   };
+
+  if (isSignedIn) return <Redirect href="/" />;
 
   return (
     <ScrollView
@@ -144,7 +147,7 @@ export default function SignUpScreen() {
       {!codeSent ? <View nativeID="clerk-captcha" /> : null}
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
         Already have an account?{" "}
-        <Link href="/(auth)/sign-in" style={{ color: colors.primary, fontWeight: "700" }}>
+        <Link href={"/(auth)/sign-in" as Href} style={{ color: colors.primary, fontWeight: "700" }}>
           Sign in
         </Link>
       </Text>

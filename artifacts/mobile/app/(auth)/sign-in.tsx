@@ -8,14 +8,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSignIn } from "@clerk/expo";
-import { Link, type Href, useRouter } from "expo-router";
+import { useAuth, useSignIn } from "@clerk/expo";
+import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 
 export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const { signIn, errors, fetchStatus } = useSignIn();
+  const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -47,6 +48,8 @@ export default function SignInScreen() {
       "This account needs an additional verification step. Use email verification or contact support.",
     );
   };
+
+  if (isSignedIn) return <Redirect href="/" />;
 
   return (
     <ScrollView
@@ -99,7 +102,7 @@ export default function SignInScreen() {
       </TouchableOpacity>
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
         New to Bloom?{" "}
-        <Link href="/(auth)/sign-up" style={{ color: colors.primary, fontWeight: "700" }}>
+        <Link href={"/(auth)/sign-up" as Href} style={{ color: colors.primary, fontWeight: "700" }}>
           Create a free account
         </Link>
       </Text>

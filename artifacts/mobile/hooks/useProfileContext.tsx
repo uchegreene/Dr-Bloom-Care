@@ -41,7 +41,7 @@ interface ProfileContextType {
   isLoading: boolean;
   profileError: string | null;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
-  completeOnboarding: (data: Pick<Profile, "username" | "name" | "dateOfBirth" | "bio" | "mode">) => Promise<void>;
+  completeOnboarding: (data: Pick<Profile, "username" | "name" | "dateOfBirth" | "bio" | "femaleOnlyConfirmed" | "mode">) => Promise<void>;
   refreshAccount: () => Promise<void>;
 }
 
@@ -71,13 +71,15 @@ function mapAccount(account: MemberAccount): Profile {
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const accountQuery = useGetAccount({
     query: {
+      queryKey: ["/account", userId],
       enabled: Boolean(isLoaded && isSignedIn),
       retry: 1,
       staleTime: 15_000,
+      refetchInterval: 60_000,
     },
   });
   const updateAccount = useUpdateAccount();

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@/lib/scopedAsyncStorage';
+import { useScopedStorage } from '@/lib/scopedAsyncStorage';
+import { useProfile } from '@/hooks/useProfileContext';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 
 export interface CycleLog {
@@ -77,6 +78,13 @@ function computeLastPeriodStart(logs: Record<string, CycleLog>): string | null {
 }
 
 export function CycleProvider({ children }: { children: ReactNode }) {
+  const AsyncStorage = useScopedStorage();
+  const { profile } = useProfile();
+  const requireCyclePlan = () => {
+    if (!profile?.subscriptionActive || profile.subscriptionPlan !== "cycle" || profile.mode !== "cycle") {
+      throw new Error("An active cycle plan is required to log cycle information.");
+    }
+  };
   const [logs, setLogs] = useState<Record<string, CycleLog>>({});
   const [intimacyLogs, setIntimacyLogs] = useState<Record<string, IntimacyLog>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -86,14 +94,7 @@ export function CycleProvider({ children }: { children: ReactNode }) {
       if (data) {
         setLogs(JSON.parse(data));
       } else {
-        // Seed some data: a period that started 14 days ago
-        const seedLogs = {
-          [format(addDays(new Date(), -14), 'yyyy-MM-dd')]: { date: format(addDays(new Date(), -14), 'yyyy-MM-dd'), flow: 'medium', symptoms: ['cramps'] },
-          [format(addDays(new Date(), -13), 'yyyy-MM-dd')]: { date: format(addDays(new Date(), -13), 'yyyy-MM-dd'), flow: 'heavy', symptoms: ['cramps', 'fatigue'] },
-          [format(addDays(new Date(), -12), 'yyyy-MM-dd')]: { date: format(addDays(new Date(), -12), 'yyyy-MM-dd'), flow: 'light', symptoms: [] },
-        } as Record<string, CycleLog>;
-        setLogs(seedLogs);
-        AsyncStorage.setItem('bloom_cycle_logs', JSON.stringify(seedLogs));
+        setLogs({});
       }
       setIsLoading(false);
     });
@@ -103,6 +104,7 @@ export function CycleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addLog = async (log: CycleLog) => {
+    requireCyclePlan();
     setLogs(prev => {
       const updated = { ...prev, [log.date]: log };
       AsyncStorage.setItem('bloom_cycle_logs', JSON.stringify(updated));
@@ -111,6 +113,7 @@ export function CycleProvider({ children }: { children: ReactNode }) {
   };
 
   const logPeriodStart = async (date: string) => {
+    requireCyclePlan();
     setLogs(prev => {
       const existing = prev[date];
       const updated = {
@@ -128,6 +131,7 @@ export function CycleProvider({ children }: { children: ReactNode }) {
   };
 
   const logIntimacy = async (date: string, protectedSex: boolean) => {
+    requireCyclePlan();
     setIntimacyLogs(prev => {
       const updated = { ...prev, [date]: { date, protectedSex } };
       AsyncStorage.setItem('bloom_intimacy_logs', JSON.stringify(updated));

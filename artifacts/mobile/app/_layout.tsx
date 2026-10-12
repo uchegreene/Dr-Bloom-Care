@@ -19,7 +19,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Mock contexts (we will implement them next)
 import { AppProviders } from "@/components/Providers";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
-import { setStorageUserScope } from "@/lib/scopedAsyncStorage";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const tokenCache = {
@@ -58,12 +57,8 @@ function RootLayoutNav() {
 
 function AuthenticatedApp() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
-  setStorageUserScope(isSignedIn ? userId : null);
-
-  useEffect(() => {
-    setAuthTokenGetter(isLoaded ? () => getToken() : null);
-    return () => setAuthTokenGetter(null);
-  }, [getToken, isLoaded]);
+  // Configure before the profile provider can start its first authenticated query.
+  setAuthTokenGetter(isLoaded ? () => getToken() : null);
 
   return (
     <AppProviders key={isSignedIn ? userId ?? "signed-in" : "signed-out"}>

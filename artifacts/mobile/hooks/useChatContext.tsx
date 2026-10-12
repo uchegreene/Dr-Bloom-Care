@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@/lib/scopedAsyncStorage';
+import { useScopedStorage } from '@/lib/scopedAsyncStorage';
+import { useProfile } from '@/hooks/useProfileContext';
 
 export interface ChatMessage {
   id: string;
@@ -44,6 +45,8 @@ const SEED_MESSAGES: Record<string, ChatMessage[]> = {
 };
 
 export function ChatProvider({ children }: { children: ReactNode }) {
+  const AsyncStorage = useScopedStorage();
+  const { profile } = useProfile();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -53,8 +56,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       AsyncStorage.getItem('bloom_friends'),
       AsyncStorage.getItem('bloom_messages')
     ]).then(([storedFriends, storedMessages]) => {
-      let f = SEED_FRIENDS;
-      let m = SEED_MESSAGES;
+      let f: Friend[] = [];
+      let m: Record<string, ChatMessage[]> = {};
       
       if (storedFriends) f = JSON.parse(storedFriends);
       else AsyncStorage.setItem('bloom_friends', JSON.stringify(f));
@@ -69,6 +72,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addFriend = async (name: string) => {
+    if (!profile?.subscriptionActive) throw new Error("An active plan is required for messaging.");
     const newFriend: Friend = {
       id: Date.now().toString(),
       name,
@@ -82,6 +86,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   const sendMessage = async (friendId: string, text: string) => {
+    if (!profile?.subscriptionActive) throw new Error("An active plan is required for messaging.");
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       senderId: 'me',
