@@ -25,6 +25,8 @@ export interface MemberAccount {
   mode: MemberAccountMode;
   role: MemberAccountRole;
   /** @nullable */
+  advisorId: number | null;
+  /** @nullable */
   subscriptionPlan: MemberAccountSubscriptionPlan;
   subscriptionStatus: MemberAccountSubscriptionStatus;
   /** @nullable */

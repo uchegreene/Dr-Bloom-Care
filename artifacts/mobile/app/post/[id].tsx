@@ -1,157 +1,144 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
+import { Feather } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Platform,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { Image } from 'expo-image';
-import { useColors } from '@/hooks/useColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSocial } from '@/hooks/useSocialContext';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { formatDistanceToNow } from 'date-fns';
-import * as Haptics from 'expo-haptics';
-import { useProfile } from '@/hooks/useProfileContext';
+  useCreateCommunityComment,
+  useGetCommunityPost,
+  useListAdvisors,
+  useToggleCommunityLike,
+} from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { POLL_MS, errorMessage, useMedicalAccess } from "@/hooks/useMedicalAccess";
+import { Composer, ErrorBox, Notice, ResponderPicker, ScreenHeader, SkeletonRows, VerifiedBadge } from "@/components/MedicalUi";
 
 export default function PostDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, likePost, addComment } = useSocial();
-  const { profile } = useProfile();
-  const canInteract = profile?.subscriptionActive === true;
-  const [text, setText] = useState('');
+  const qc = useQueryClient();
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = Number(params.id);
+  const { userId, ready, canInteract, isPaid, isAdmin, isStaff, ownAdvisorId } = useMedicalAccess();
+  const post = useGetCommunityPost(id, {
+    query: { queryKey: ["community", "post", userId, id], enabled: ready && Number.isFinite(id), refetchInterval: POLL_MS },
+  });
+  const advisors = useListAdvisors({ query: { queryKey: ["advisors", userId], enabled: ready && isStaff } });
+  const comment = useCreateCommunityComment();
+  const like = useToggleCommunityLike();
+  const [text, setText] = useState("");
+  const [chosen, setChosen] = useState<number | null>(null);
+  const [error, setError] = useState("");
 
-  const post = posts.find(p => p.id === id);
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const data = post.data;
+  const responder = isAdmin ? chosen ?? data?.taggedAdvisors[0]?.id ?? advisors.data?.[0]?.id ?? null : ownAdvisorId;
 
-  if (!post) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.body, { color: colors.mutedForeground }]}>Post not found.</Text>
-      </View>
-    );
-  }
-
-  const handleLike = () => {
-    if (!canInteract) return;
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    likePost(post.id);
+  const send = async () => {
+    setError("");
+    if (isStaff && !responder) {
+      setError("Choose a verified profile to respond as.");
+      return;
+    }
+    try {
+      await comment.mutateAsync({ id, data: { text: text.trim(), ...(isStaff ? { advisorId: responder } : {}) } });
+      setText("");
+      await qc.invalidateQueries({ queryKey: ["community"] });
+    } catch (e) {
+      setError(errorMessage(e, "Could not post your comment."));
+    }
   };
 
-  const handleComment = async () => {
-    if (!canInteract) return;
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    await addComment(post.id, trimmed);
-    setText('');
+  const toggleLike = async () => {
+    try {
+      await like.mutateAsync({ id });
+      await qc.invalidateQueries({ queryKey: ["community"] });
+    } catch {
+      setError("Could not update your like.");
+    }
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topInset + 8, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Post</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.postHeader}>
-          <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {post.authorName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.author, { color: colors.foreground }]}>{post.authorName}</Text>
-            <Text style={[styles.time, { color: colors.mutedForeground }]}>
-              {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-            </Text>
-          </View>
-          {post.tag && (
-            <View style={[styles.tag, { backgroundColor: colors.secondary }]}>
-              <Text style={[styles.tagText, { color: colors.primary }]}>{post.tag}</Text>
+    <KeyboardAvoidingView style={[styles.page, { backgroundColor: colors.background }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScreenHeader title="Post" />
+      {post.isLoading ? <SkeletonRows count={2} /> : null}
+      {post.error ? <ErrorBox message="Could not load this post." onRetry={() => post.refetch()} /> : null}
+      {data ? (
+        <FlatList
+          data={data.comments}
+          keyExtractor={(c) => String(c.id)}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 18, paddingBottom: 30 }}
+          ListHeaderComponent={
+            <View style={{ marginBottom: 14 }}>
+              <View style={styles.row}>
+                <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+                  <Text style={[styles.avatarText, { color: colors.primary }]}>{data.authorName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.author, { color: colors.foreground }]}>{data.authorName}</Text>
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>{formatDistanceToNow(new Date(data.timestamp), { addSuffix: true })}</Text>
+                </View>
+                {data.tag ? <Text style={[styles.tag, { color: colors.primary, backgroundColor: colors.secondary }]}>{data.tag}</Text> : null}
+              </View>
+              {data.text ? <Text style={[styles.body, { color: colors.foreground }]}>{data.text}</Text> : null}
+              {data.imageUri ? <Image source={{ uri: data.imageUri }} style={styles.image} contentFit="cover" /> : null}
+              {data.taggedAdvisors.length > 0 ? (
+                <View style={{ marginTop: 14, gap: 6 }}>
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>Asked of</Text>
+                  {data.taggedAdvisors.map((a) => (
+                    <View key={a.id} style={[styles.tagged, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.author, { color: colors.foreground }]}>{a.name}</Text>
+                        <Text style={[styles.muted, { color: colors.mutedForeground }]}>{a.title} · {a.specialty}</Text>
+                      </View>
+                      {a.isVerified ? <VerifiedBadge label="Verified" /> : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              <View style={[styles.row, { marginTop: 14, gap: 20 }]}>
+                <TouchableOpacity onPress={toggleLike} disabled={!isPaid || like.isPending} style={styles.row} hitSlop={8}>
+                  <Feather name="heart" size={20} color={data.liked ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>{data.likes}</Text>
+                </TouchableOpacity>
+                <View style={styles.row}>
+                  <Feather name="message-circle" size={20} color={colors.mutedForeground} />
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>{data.comments.length}</Text>
+                </View>
+              </View>
+              {!canInteract ? (
+                <View style={{ marginTop: 14 }}>
+                  <Notice icon="lock">Free accounts are read-only. An active plan lets you comment and like.</Notice>
+                </View>
+              ) : null}
+              <Text style={[styles.section, { color: colors.foreground }]}>Replies</Text>
+              {data.comments.length === 0 ? <Text style={[styles.muted, { color: colors.mutedForeground }]}>No replies yet.</Text> : null}
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={[styles.comment, { backgroundColor: item.isVerified ? colors.secondary : colors.card, borderColor: item.isVerified ? colors.primary : colors.border }]}>
+              <View style={styles.row}>
+                <Text style={[styles.author, { color: colors.foreground }]}>{item.authorName}</Text>
+                {item.isVerified ? <VerifiedBadge label="Verified professional" /> : null}
+              </View>
+              {item.credentials ? <Text style={[styles.muted, { color: colors.mutedForeground }]}>{item.credentials}</Text> : null}
+              <Text style={[styles.body, { color: colors.foreground, marginTop: 8 }]}>{item.text}</Text>
+              <Text style={[styles.muted, { color: colors.mutedForeground, marginTop: 6 }]}>{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</Text>
             </View>
           )}
-        </View>
-
-        {post.text ? <Text style={[styles.body, { color: colors.foreground }]}>{post.text}</Text> : null}
-
-        {post.imageUri ? (
-          <Image source={{ uri: post.imageUri }} style={styles.postImage} contentFit="cover" />
-        ) : null}
-
-        {canInteract ? (
-          <TouchableOpacity style={styles.likeRow} onPress={handleLike} activeOpacity={0.6}>
-            <Feather name="heart" size={20} color={post.liked ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.likeText, { color: post.liked ? colors.primary : colors.mutedForeground }]}>
-              {post.likes} {post.likes === 1 ? 'like' : 'likes'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.likeRow}>
-            <Feather name="heart" size={20} color={colors.mutedForeground} />
-            <Text style={[styles.likeText, { color: colors.mutedForeground }]}>
-              {post.likes} {post.likes === 1 ? 'like' : 'likes'}
-            </Text>
-          </View>
-        )}
-
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        <Text style={[styles.commentsTitle, { color: colors.foreground }]}>
-          Comments ({post.comments.length})
-        </Text>
-
-        {post.comments.length === 0 ? (
-          <Text style={[styles.noComments, { color: colors.mutedForeground }]}>
-            {canInteract ? "No comments yet. Be the first to reply." : "No comments yet."}
-          </Text>
-        ) : (
-          post.comments.map(c => (
-            <View key={c.id} style={styles.comment}>
-              <View style={[styles.commentAvatar, { backgroundColor: colors.secondary }]}>
-                <Text style={[styles.commentAvatarText, { color: colors.primary }]}>
-                  {c.authorName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={[styles.commentBubble, { backgroundColor: colors.card }]}>
-                <Text style={[styles.commentAuthor, { color: colors.foreground }]}>{c.authorName}</Text>
-                <Text style={[styles.commentText, { color: colors.foreground }]}>{c.text}</Text>
-                <Text style={[styles.commentTime, { color: colors.mutedForeground }]}>
-                  {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
-                </Text>
-              </View>
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      {canInteract ? (
-        <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 8 }]}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Write a comment..."
-            placeholderTextColor={colors.mutedForeground}
-            style={[styles.commentInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
-          />
-          <TouchableOpacity
-            onPress={handleComment}
-            disabled={!text.trim()}
-            style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.border }]}
-          >
-            <Feather name="send" size={18} color={colors.primaryForeground} />
-          </TouchableOpacity>
+        />
+      ) : null}
+      {data && canInteract ? (
+        <View>
+          {isStaff ? (
+            <ResponderPicker isAdmin={isAdmin} advisors={advisors.data ?? []} value={responder} onChange={setChosen}
+              ownName={advisors.data?.find(advisor => advisor.id === ownAdvisorId)?.name} />
+          ) : null}
+          {error ? <Text style={[styles.err, { color: colors.destructive }]}>{error}</Text> : null}
+          <Composer value={text} onChange={setText} onSend={send} pending={comment.isPending} placeholder="Write a reply…" bottomInset={Platform.OS === "web" ? 24 : insets.bottom} />
         </View>
       ) : null}
     </KeyboardAvoidingView>
@@ -159,145 +146,17 @@ export default function PostDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  author: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 16,
-  },
-  time: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-  },
-  tag: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  tagText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 12,
-  },
-  body: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 17,
-    lineHeight: 26,
-  },
-  postImage: {
-    width: '100%',
-    height: 240,
-    borderRadius: 16,
-    marginTop: 16,
-  },
-  likeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-  },
-  likeText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 15,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 20,
-  },
-  commentsTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-    marginBottom: 16,
-  },
-  noComments: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-  },
-  comment: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  commentAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
-  commentBubble: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 12,
-  },
-  commentAuthor: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 14,
-  },
-  commentText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-    lineHeight: 21,
-    marginTop: 2,
-  },
-  commentTime: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  commentInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  page: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  avatar: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontFamily: "Nunito_700Bold", fontSize: 17 },
+  author: { fontFamily: "Nunito_700Bold", fontSize: 14.5 },
+  muted: { fontFamily: "Nunito_400Regular", fontSize: 12.5 },
+  tag: { fontFamily: "Nunito_700Bold", fontSize: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, overflow: "hidden" },
+  body: { fontFamily: "Nunito_400Regular", fontSize: 15.5, lineHeight: 23, marginTop: 14 },
+  image: { width: "100%", height: 240, borderRadius: 14, marginTop: 14 },
+  tagged: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 12, padding: 10 },
+  section: { fontFamily: "Nunito_700Bold", fontSize: 17, marginTop: 22, marginBottom: 8 },
+  comment: { borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 10 },
+  err: { fontFamily: "Nunito_700Bold", fontSize: 13, paddingHorizontal: 16, paddingTop: 6 },
 });

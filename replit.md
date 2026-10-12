@@ -1,6 +1,6 @@
 # HER BLOOM
 
-A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, a pregnancy tracker, a community feed, and 1:1 chat. Clerk handles email/password accounts; the API and PostgreSQL store profiles, plans, membership requests, and verified professional advice. Private tracker data and the existing member social/chat features remain account-scoped on-device storage. Onboarding collects a public username, full name, date of birth (DOB stored as `YYYY-MM-DD`, age 13–120), and women-only self-attestation.
+A warm, supportive Expo (React Native) mobile app for women, mothers, and mothers-to-be: period/cycle tracking, pregnancy tracking, a community feed, and private topic-based conversations with a shared medical team. Clerk handles email/password accounts. The API and PostgreSQL persist profiles, memberships, professional advice, community posts/comments/likes/tags, medical conversations and explicit professional-account assignments. Private health trackers remain account-scoped on-device storage. Onboarding collects a public username, name, date of birth (stored as `YYYY-MM-DD`, age 13–120), and women-only self-attestation.
 
 ## Run & Operate
 
@@ -24,13 +24,17 @@ A warm, supportive Expo (React Native) mobile app for women, mothers, and mother
 
 - App code: `artifacts/mobile` (Expo, expo-router file-based routing)
 - Screens: `artifacts/mobile/app` — `(tabs)/` holds the tab screens (cycle, pregnancy, community, chat, profile); modals and detail routes at the app root (`onboarding`, `cycle-log`, `pregnancy-log`, `post-create`, `post/[id]`, `chat/[id]`)
-- State + persistence: `artifacts/mobile/hooks/use*Context.tsx` — private Cycle, Pregnancy, Social, Chat, and Reminder data uses account-scoped on-device storage; Profile uses authenticated API queries.
+- State + persistence: Cycle, Pregnancy and Reminder contexts use account-scoped on-device storage. Profile and community/medical-team screens use authenticated generated API hooks. Old local Social/Chat contexts and records are retained but no longer drive the active screens.
 - Theme: `artifacts/mobile/constants/colors.ts` (coral/blush/sage palette, light + dark, radius 16); read via `hooks/useColors.ts`
 - Shared Calendar UI: `artifacts/mobile/components/Calendar.tsx`
 
 ## Architecture decisions
 
-- App accounts, membership requests, configurable plan fees, and verified professional advice use the API server and PostgreSQL. Existing member social/chat and personal tracking features remain on-device; do not describe those as cross-device or real-time.
+- Accounts, memberships, configurable fees, verified advice, community questions and medical DMs use PostgreSQL. Shared posts and inboxes refresh every 15 seconds, not WebSockets. Health tracker records remain on-device.
+- Community photos use private App Storage with authenticated upload requests, ownership/metadata checks and short-lived read URLs; never save photo bytes or local device URIs in PostgreSQL.
+- Medical-team accounts are explicitly linked to one verified professional profile by an administrator. Specialists may read the shared inbox, reply under their own profile and publish advice without buying a subscription; they cannot change fees or activate memberships.
+- DMs are visible only to their member and authorized medical team/admins. Ordinary members require an active plan for private access or any community write. Public tags identify the addressed profile; reply attribution identifies the actual responding specialist.
+- Run `pnpm --filter @workspace/api-server run test:care` for isolated synthetic-cohort permission, persistence and real App Storage checks. The test cleans its records and objects and never adds auth bypasses to the running app.
 - Context files that render JSX providers are `.tsx` (not `.ts`), or `tsc` fails to parse the JSX.
 - Tab set is conditional on `profile.mode`: `cycle` shows the Cycle tab, `pregnant` shows the Pregnancy tab, `none` ("Just Browsing") hides both and lands on Community. Both the root redirect (`app/index.tsx`) and the tab layout branch on this.
 - Pregnancy EDD uses Naegele's rule (LMP + 280 days) in `usePregnancyContext`; recomputed on every date edit.
@@ -41,8 +45,8 @@ A warm, supportive Expo (React Native) mobile app for women, mothers, and mother
 
 - Cycle tracking: calendar with flow/symptom/mood logging; phase, next-period, and fertile-window prediction.
 - Pregnancy tracker: EDD via LMP, week/day/trimester/countdown, weekly notes, daily symptom/weight log.
-- Community: post, like, comment, with category tags (Journey/Advice/Health).
-- Friends + 1:1 chat.
+- Community: shared posts, likes, comments, topics and up to three verified medical-profile tags.
+- Paid private medical discussions by topic; shared specialist inbox with named, verified replies.
 - Profile + onboarding with tracking-mode selection.
 
 ## User preferences

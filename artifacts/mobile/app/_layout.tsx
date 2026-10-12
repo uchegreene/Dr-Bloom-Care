@@ -49,6 +49,7 @@ function RootLayoutNav() {
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="medical-team" options={{ headerShown: false }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="health-tips" options={{ headerShown: false, presentation: "modal" }} />
     </Stack>

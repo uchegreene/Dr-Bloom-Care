@@ -1,201 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import { useColors } from '@/hooks/useColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChat, ChatMessage } from '@/hooks/useChatContext';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { format } from 'date-fns';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Redirect } from 'expo-router';
-import { useProfile } from '@/hooks/useProfileContext';
+  useListAdvisors,
+  useListMedicalConversations,
+  useListMedicalMessages,
+  useSendMedicalMessage,
+} from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { POLL_MS, errorMessage, useMedicalAccess } from "@/hooks/useMedicalAccess";
+import { Composer, Empty, ErrorBox, Notice, ResponderPicker, ScreenHeader, SkeletonRows, TEAM_DISCLOSURE, VerifiedBadge } from "@/components/MedicalUi";
 
-export default function ChatThread() {
+export default function ChatDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { friends, messages, sendMessage } = useChat();
-  const { profile } = useProfile();
-  const [text, setText] = useState('');
+  const qc = useQueryClient();
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = Number(params.id);
+  const { userId, ready, canInteract, isAdmin, isStaff, ownAdvisorId } = useMedicalAccess();
+  const enabled = ready && canInteract && Number.isFinite(id);
+  const convos = useListMedicalConversations({ query: { queryKey: ["medical", "conversations", userId], enabled, refetchInterval: POLL_MS } });
+  const messages = useListMedicalMessages(id, { query: { queryKey: ["medical", "messages", userId, id], enabled, refetchInterval: POLL_MS } });
+  const advisors = useListAdvisors({ query: { queryKey: ["advisors", userId], enabled: enabled && isStaff } });
+  const send = useSendMedicalMessage();
+  const [text, setText] = useState("");
+  const [chosen, setChosen] = useState<number | null>(null);
+  const [error, setError] = useState("");
 
-  const friend = friends.find(f => f.id === id);
-  const thread = messages[id ?? ''] ?? [];
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const convo = canInteract && !convos.error ? convos.data?.find((c) => c.id === id) : undefined;
+  const responder = isAdmin ? chosen ?? convo?.advisorId ?? advisors.data?.[0]?.id ?? null : ownAdvisorId;
+  const ownName = isStaff && !isAdmin ? advisors.data?.find((a) => a.id === ownAdvisorId)?.name : undefined;
 
-  if (!profile?.subscriptionActive) return <Redirect href="/(tabs)/community" />;
-
-  const handleSend = async () => {
-    const trimmed = text.trim();
-    if (!trimmed || !id) return;
-    setText('');
-    await sendMessage(id, trimmed);
+  const submit = async () => {
+    setError("");
+    if (isStaff && !responder) return setError("Choose a verified profile to respond as.");
+    try {
+      await send.mutateAsync({ id, data: { text: text.trim(), ...(isStaff ? { advisorId: responder } : {}) } });
+      setText("");
+      await qc.invalidateQueries({ queryKey: ["medical"] });
+    } catch (e) {
+      setError(errorMessage(e, "Could not send your message."));
+    }
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const mine = item.senderId === 'me';
-    return (
-      <View style={[styles.bubbleRow, { justifyContent: mine ? 'flex-end' : 'flex-start' }]}>
-        <View
-          style={[
-            styles.bubble,
-            {
-              backgroundColor: mine ? colors.primary : colors.card,
-              borderColor: colors.border,
-              borderWidth: mine ? 0 : 1,
-              borderBottomRightRadius: mine ? 4 : 18,
-              borderBottomLeftRadius: mine ? 18 : 4,
-            },
-          ]}
-        >
-          <Text style={[styles.bubbleText, { color: mine ? colors.primaryForeground : colors.foreground }]}>
-            {item.text}
-          </Text>
-          <Text style={[styles.bubbleTime, { color: mine ? colors.primaryForeground : colors.mutedForeground }]}>
-            {format(new Date(item.timestamp), 'h:mm a')}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  const data = [...(messages.data ?? [])].reverse();
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topInset + 8, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={[styles.headerAvatar, { backgroundColor: colors.secondary }]}>
-          <Text style={[styles.headerAvatarText, { color: colors.primary }]}>
-            {friend?.avatarInitials ?? '?'}
-          </Text>
-        </View>
-        <Text style={[styles.headerName, { color: colors.foreground }]} numberOfLines={1}>
-          {friend?.name ?? 'Chat'}
-        </Text>
-      </View>
-
-      <FlatList
-        data={thread}
-        keyExtractor={m => m.id}
-        renderItem={renderMessage}
-        inverted
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={[styles.empty, { transform: [{ scaleY: -1 }] }]}>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Say hello to start the conversation.
-            </Text>
-          </View>
-        }
+    <KeyboardAvoidingView style={[styles.page, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
+      <ScreenHeader
+        title={convo?.topic ?? "Conversation"}
+        subtitle={convo ? (isStaff ? `@${convo.memberUsername} · asked ${convo.advisorName}` : `${convo.advisorName} · ${convo.advisorSpecialty}`) : undefined}
       />
-
-      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 8 }]}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="Type a message..."
-          placeholderTextColor={colors.mutedForeground}
-          style={[styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
+      {!canInteract ? <Notice icon="lock">Private messages need an active plan.</Notice> : null}
+      {messages.isLoading ? <SkeletonRows count={3} /> : null}
+      {messages.error ? <ErrorBox message="Could not load messages." onRetry={() => messages.refetch()} /> : null}
+      {messages.data && canInteract && !messages.error ? (
+        <FlatList
+          inverted
+          data={data}
+          keyExtractor={(m) => String(m.id)}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+          ListEmptyComponent={<View style={{ transform: [{ scaleY: -1 }] }}><Empty icon="message-circle" title="No messages yet" /></View>}
+          ListFooterComponent={<View style={{ marginBottom: 6 }}><Notice icon="shield">{TEAM_DISCLOSURE}</Notice></View>}
+          renderItem={({ item }) => {
+            const mine = isStaff ? !item.fromMember : item.fromMember;
+            return (
+              <View style={{ alignItems: mine ? "flex-end" : "flex-start" }}>
+                <View style={[styles.bubble, { backgroundColor: mine ? colors.primary : colors.card, borderColor: mine ? colors.primary : colors.border }]}>
+                  {!item.fromMember ? (
+                    <View style={styles.nameRow}>
+                      <Text style={[styles.name, { color: mine ? colors.primaryForeground : colors.foreground }]}>{item.authorName}</Text>
+                      {item.isVerified ? <VerifiedBadge label={mine ? undefined : "Verified"} /> : null}
+                    </View>
+                  ) : isStaff ? (
+                    <Text style={[styles.name, { color: colors.foreground }]}>{item.authorName}</Text>
+                  ) : null}
+                  <Text style={[styles.msg, { color: mine ? colors.primaryForeground : colors.foreground }]}>{item.text}</Text>
+                  <Text style={[styles.time, { color: mine ? colors.primaryForeground : colors.mutedForeground }]}>{format(new Date(item.timestamp), "d MMM, HH:mm")}</Text>
+                </View>
+              </View>
+            );
+          }}
         />
-        <TouchableOpacity
-          onPress={handleSend}
-          disabled={!text.trim()}
-          style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.border }]}
-        >
-          <Feather name="send" size={18} color={colors.primaryForeground} />
-        </TouchableOpacity>
-      </View>
+      ) : null}
+      {messages.data && canInteract && !messages.error ? (
+        <View>
+          {isStaff ? <ResponderPicker isAdmin={isAdmin} advisors={advisors.data ?? []} value={responder} onChange={setChosen} ownName={ownName} /> : null}
+          {error ? <Text style={[styles.err, { color: colors.destructive }]}>{error}</Text> : null}
+          <Composer value={text} onChange={setText} onSend={submit} pending={send.isPending} placeholder="Write a message…" bottomInset={Platform.OS === "web" ? 24 : insets.bottom} />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerAvatarText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
-  headerName: {
-    flex: 1,
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  bubbleRow: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  bubble: {
-    maxWidth: '78%',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  bubbleText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  bubbleTime: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 11,
-    marginTop: 4,
-    opacity: 0.8,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  page: { flex: 1 },
+  bubble: { maxWidth: "84%", borderWidth: 1, borderRadius: 18, paddingHorizontal: 13, paddingVertical: 9 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  name: { fontFamily: "Nunito_700Bold", fontSize: 12.5, marginBottom: 2 },
+  msg: { fontFamily: "Nunito_400Regular", fontSize: 15, lineHeight: 21 },
+  time: { fontFamily: "Nunito_400Regular", fontSize: 11, marginTop: 4, opacity: 0.75 },
+  err: { fontFamily: "Nunito_700Bold", fontSize: 13, paddingHorizontal: 16, paddingTop: 6 },
 });

@@ -24,6 +24,7 @@ export type MemberAccountRole = typeof MemberAccountRole[keyof typeof MemberAcco
 export const MemberAccountRole = {
   member: 'member',
   admin: 'admin',
+  medical_team: 'medical_team',
 } as const;
 
 /**
@@ -70,6 +71,8 @@ export interface MemberAccount {
   femaleOnlyConfirmed: boolean;
   mode: MemberAccountMode;
   role: MemberAccountRole;
+  /** @nullable */
+  advisorId: number | null;
   /** @nullable */
   subscriptionPlan: MemberAccountSubscriptionPlan;
   subscriptionStatus: MemberAccountSubscriptionStatus;
@@ -324,5 +327,162 @@ export interface MembershipGrantInput {
      */
   months: number;
   confirmedPayment: boolean;
+}
+
+/**
+ * @nullable
+ */
+export type CommunityPostInputTag = typeof CommunityPostInputTag[keyof typeof CommunityPostInputTag] | null;
+
+
+export const CommunityPostInputTag = {
+  Journey: 'Journey',
+  Advice: 'Advice',
+  Health: 'Health',
+} as const;
+
+export interface CommunityPostInput {
+  /** @maxLength 6000 */
+  text: string;
+  /** @nullable */
+  tag?: CommunityPostInputTag;
+  /** @nullable */
+  imageId?: string | null;
+  /**
+     * @maxItems 3
+     * @items.minimum 1
+     */
+  advisorIds?: number[];
+}
+
+export interface CommunityCommentInput {
+  /**
+     * @minLength 1
+     * @maxLength 6000
+     */
+  text: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  advisorId?: number | null;
+}
+
+export interface CommunityComment {
+  id: number;
+  authorId: string;
+  authorName: string;
+  text: string;
+  timestamp: string;
+  /** @nullable */
+  advisorId: number | null;
+  isVerified: boolean;
+  /** @nullable */
+  credentials: string | null;
+}
+
+export interface CommunityPost {
+  id: number;
+  authorId: string;
+  authorName: string;
+  text: string;
+  /** @nullable */
+  tag: string | null;
+  /** @nullable */
+  imageUri: string | null;
+  likes: number;
+  liked: boolean;
+  comments: CommunityComment[];
+  taggedAdvisors: Advisor[];
+  timestamp: string;
+}
+
+export type CommunityUploadInputContentType = typeof CommunityUploadInputContentType[keyof typeof CommunityUploadInputContentType];
+
+
+export const CommunityUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface CommunityUploadInput {
+  contentType: CommunityUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 8388608
+     */
+  size: number;
+}
+
+export interface CommunityUpload {
+  imageId: string;
+  uploadUrl: string;
+}
+
+export interface MedicalConversationInput {
+  /** @minimum 1 */
+  advisorId: number;
+  /**
+     * @minLength 3
+     * @maxLength 180
+     */
+  topic: string;
+  /**
+     * @minLength 1
+     * @maxLength 6000
+     */
+  firstMessage: string;
+}
+
+export interface MedicalConversation {
+  id: number;
+  advisorId: number;
+  advisorName: string;
+  advisorSpecialty: string;
+  memberUsername: string;
+  topic: string;
+  lastMessage: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface MedicalMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 6000
+     */
+  text: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  advisorId?: number | null;
+}
+
+export interface MedicalMessage {
+  id: number;
+  text: string;
+  authorName: string;
+  /** @nullable */
+  advisorId: number | null;
+  fromMember: boolean;
+  isVerified: boolean;
+  timestamp: string;
+}
+
+export interface MedicalTeamAssignment {
+  /** @minLength 1 */
+  userId: string;
+  /** @minimum 1 */
+  advisorId: number;
+}
+
+export interface MedicalTeamMember {
+  userId: string;
+  username: string;
+  name: string;
+  advisorId: number;
+  advisorName: string;
 }
 

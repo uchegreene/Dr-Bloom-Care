@@ -12,4 +12,5 @@ export type MemberAccountRole = typeof MemberAccountRole[keyof typeof MemberAcco
 export const MemberAccountRole = {
   member: 'member',
   admin: 'admin',
+  medical_team: 'medical_team',
 } as const;

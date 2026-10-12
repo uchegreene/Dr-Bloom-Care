@@ -29,7 +29,8 @@ export const GetAccountResponse = zod.object({
   "bio": zod.string(),
   "femaleOnlyConfirmed": zod.boolean(),
   "mode": zod.enum(['cycle', 'pregnant', 'none']),
-  "role": zod.enum(['member', 'admin']),
+  "role": zod.enum(['member', 'admin', 'medical_team']),
+  "advisorId": zod.number().nullable(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
   "subscriptionExpiresAt": zod.coerce.date().nullable(),
@@ -72,7 +73,8 @@ export const UpdateAccountResponse = zod.object({
   "bio": zod.string(),
   "femaleOnlyConfirmed": zod.boolean(),
   "mode": zod.enum(['cycle', 'pregnant', 'none']),
-  "role": zod.enum(['member', 'admin']),
+  "role": zod.enum(['member', 'admin', 'medical_team']),
+  "advisorId": zod.number().nullable(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
   "subscriptionExpiresAt": zod.coerce.date().nullable(),
@@ -307,5 +309,418 @@ export const GrantMembershipResponse = zod.object({
   "requestedPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "requestedAt": zod.coerce.date().nullable()
 })
+
+
+export const ListCommunityPostsResponseItem = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+export const ListCommunityPostsResponse = zod.array(ListCommunityPostsResponseItem)
+
+
+export const createCommunityPostBodyTextMax = 6000;
+
+
+export const createCommunityPostBodyAdvisorIdsMax = 3;
+
+
+
+export const CreateCommunityPostBody = zod.object({
+  "text": zod.string().max(createCommunityPostBodyTextMax),
+  "tag": zod.union([zod.literal('Journey'),zod.literal('Advice'),zod.literal('Health'),zod.literal(null)]).nullish(),
+  "imageId": zod.string().nullish(),
+  "advisorIds": zod.array(zod.number().min(1)).max(createCommunityPostBodyAdvisorIdsMax).optional()
+})
+
+export const CreateCommunityPostResponse = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+
+
+
+
+
+export const GetCommunityPostParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const GetCommunityPostResponse = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+
+
+
+
+
+export const CreateCommunityCommentParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const createCommunityCommentBodyTextMax = 6000;
+
+
+
+
+export const CreateCommunityCommentBody = zod.object({
+  "text": zod.string().min(1).max(createCommunityCommentBodyTextMax),
+  "advisorId": zod.number().min(1).nullish()
+})
+
+export const CreateCommunityCommentResponse = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+
+
+
+
+
+export const ToggleCommunityLikeParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const ToggleCommunityLikeResponse = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+
+
+export const requestCommunityUploadBodySizeMax = 8388608;
+
+
+
+export const RequestCommunityUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "size": zod.number().min(1).max(requestCommunityUploadBodySizeMax)
+})
+
+export const RequestCommunityUploadResponse = zod.object({
+  "imageId": zod.string(),
+  "uploadUrl": zod.string()
+})
+
+
+export const ListMedicalQuestionsResponseItem = zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "tag": zod.string().nullable(),
+  "imageUri": zod.string().nullable(),
+  "likes": zod.number(),
+  "liked": zod.boolean(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "authorId": zod.string(),
+  "authorName": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "advisorId": zod.number().nullable(),
+  "isVerified": zod.boolean(),
+  "credentials": zod.string().nullable()
+})),
+  "taggedAdvisors": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "credentials": zod.string(),
+  "bio": zod.string(),
+  "isVerified": zod.boolean(),
+  "isActive": zod.boolean()
+})),
+  "timestamp": zod.coerce.date()
+})
+export const ListMedicalQuestionsResponse = zod.array(ListMedicalQuestionsResponseItem)
+
+
+
+export const publishMedicalAdviceBodyTitleMin = 5;
+export const publishMedicalAdviceBodyTitleMax = 180;
+
+export const publishMedicalAdviceBodyBodyMin = 20;
+export const publishMedicalAdviceBodyBodyMax = 6000;
+
+
+
+export const PublishMedicalAdviceBody = zod.object({
+  "advisorId": zod.number().min(1),
+  "title": zod.string().min(publishMedicalAdviceBodyTitleMin).max(publishMedicalAdviceBodyTitleMax),
+  "body": zod.string().min(publishMedicalAdviceBodyBodyMin).max(publishMedicalAdviceBodyBodyMax),
+  "category": zod.enum(['Cycle health', 'Pregnancy', 'Sexual health', 'Newborn care', 'General'])
+})
+
+export const PublishMedicalAdviceResponse = zod.object({
+  "id": zod.number(),
+  "advisorId": zod.number(),
+  "authorName": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "category": zod.enum(['Cycle health', 'Pregnancy', 'Sexual health', 'Newborn care', 'General']),
+  "credentials": zod.string(),
+  "specialty": zod.string(),
+  "isVerified": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const ListMedicalConversationsResponseItem = zod.object({
+  "id": zod.number(),
+  "advisorId": zod.number(),
+  "advisorName": zod.string(),
+  "advisorSpecialty": zod.string(),
+  "memberUsername": zod.string(),
+  "topic": zod.string(),
+  "lastMessage": zod.string(),
+  "updatedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMedicalConversationsResponse = zod.array(ListMedicalConversationsResponseItem)
+
+
+
+export const startMedicalConversationBodyTopicMin = 3;
+export const startMedicalConversationBodyTopicMax = 180;
+
+export const startMedicalConversationBodyFirstMessageMax = 6000;
+
+
+
+export const StartMedicalConversationBody = zod.object({
+  "advisorId": zod.number().min(1),
+  "topic": zod.string().min(startMedicalConversationBodyTopicMin).max(startMedicalConversationBodyTopicMax),
+  "firstMessage": zod.string().min(1).max(startMedicalConversationBodyFirstMessageMax)
+})
+
+export const StartMedicalConversationResponse = zod.object({
+  "id": zod.number(),
+  "advisorId": zod.number(),
+  "advisorName": zod.string(),
+  "advisorSpecialty": zod.string(),
+  "memberUsername": zod.string(),
+  "topic": zod.string(),
+  "lastMessage": zod.string(),
+  "updatedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})
+
+
+
+
+
+export const ListMedicalMessagesParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const ListMedicalMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "text": zod.string(),
+  "authorName": zod.string(),
+  "advisorId": zod.number().nullable(),
+  "fromMember": zod.boolean(),
+  "isVerified": zod.boolean(),
+  "timestamp": zod.coerce.date()
+})
+export const ListMedicalMessagesResponse = zod.array(ListMedicalMessagesResponseItem)
+
+
+
+
+
+export const SendMedicalMessageParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const sendMedicalMessageBodyTextMax = 6000;
+
+
+
+
+export const SendMedicalMessageBody = zod.object({
+  "text": zod.string().min(1).max(sendMedicalMessageBodyTextMax),
+  "advisorId": zod.number().min(1).nullish()
+})
+
+export const SendMedicalMessageResponse = zod.object({
+  "id": zod.number(),
+  "text": zod.string(),
+  "authorName": zod.string(),
+  "advisorId": zod.number().nullable(),
+  "fromMember": zod.boolean(),
+  "isVerified": zod.boolean(),
+  "timestamp": zod.coerce.date()
+})
+
+
+export const ListMedicalTeamResponseItem = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "name": zod.string(),
+  "advisorId": zod.number(),
+  "advisorName": zod.string()
+})
+export const ListMedicalTeamResponse = zod.array(ListMedicalTeamResponseItem)
+
+
+
+
+
+
+export const AssignMedicalTeamMemberBody = zod.object({
+  "userId": zod.string().min(1),
+  "advisorId": zod.number().min(1)
+})
+
+export const AssignMedicalTeamMemberResponse = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "name": zod.string(),
+  "advisorId": zod.number(),
+  "advisorName": zod.string()
+})
+
+
+export const RevokeMedicalTeamMemberParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const RevokeMedicalTeamMemberResponse = zod.void()
 
 

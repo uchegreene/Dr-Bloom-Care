@@ -118,7 +118,11 @@ export default function TabLayout() {
     profile?.subscriptionActive === true &&
     profile.subscriptionPlan === "pregnancy" &&
     profile.mode === "pregnant";
-  const canChat = profile?.subscriptionActive === true;
+  const role: string | undefined = profile?.role;
+  const isStaff =
+    role === "admin" ||
+    (role === "medical_team" && (profile as { advisorId?: number | null }).advisorId != null);
+  const canChat = profile?.subscriptionActive === true || isStaff;
 
   if (!profile?.profileComplete) return <Redirect href="/" />;
   if (pathname.endsWith("/cycle") && !canUseCycle) {

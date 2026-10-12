@@ -26,7 +26,8 @@ export interface Profile {
   bio: string;
   femaleOnlyConfirmed: boolean;
   mode: ProfileMode;
-  role: "member" | "admin";
+  role: "member" | "admin" | "medical_team";
+  advisorId: number | null;
   subscriptionPlan: SubscriptionPlan | null;
   subscriptionStatus: "free" | "active" | "expired";
   subscriptionExpiresAt: string | null;
@@ -58,6 +59,7 @@ function mapAccount(account: MemberAccount): Profile {
     femaleOnlyConfirmed: account.femaleOnlyConfirmed,
     mode: account.mode,
     role: account.role,
+    advisorId: account.advisorId,
     subscriptionPlan: account.subscriptionPlan,
     subscriptionStatus: account.subscriptionStatus,
     subscriptionExpiresAt: account.subscriptionExpiresAt

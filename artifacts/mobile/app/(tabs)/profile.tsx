@@ -283,6 +283,15 @@ export default function ProfileScreen() {
         })}
       </View>
 
+      {(profile?.role === "admin" || profile?.role === "medical_team") && (
+        <TouchableOpacity
+          onPress={() => router.push("/medical-team" as Href)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 14, marginTop: 12 }}
+        >
+          <Feather name="inbox" size={18} color={colors.primary} />
+          <Text style={{ fontFamily: "Nunito_700Bold", fontSize: 15, color: colors.primary }}>Medical team inbox</Text>
+        </TouchableOpacity>
+      )}
       {profile?.role === "admin" && (
         <TouchableOpacity
           onPress={() => router.push("/admin" as Href)}

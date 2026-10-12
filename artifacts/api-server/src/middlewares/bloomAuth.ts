@@ -1,11 +1,33 @@
 import { clerkClient, getAuth } from "@clerk/express";
-import { bloomAccountsTable, db } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { bloomAccountsTable, bloomAdvisorsTable, medicalTeamTable, db } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 import type { NextFunction, Request, Response } from "express";
 
 export interface BloomRequest extends Request {
   bloomUserId?: string;
   bloomEmail?: string;
+}
+
+export function isBloomAdmin(email: string) {
+  return (process.env.ADMIN_EMAILS ?? "").split(",")
+    .map(value => value.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+}
+
+export async function medicalAccessFor(userId: string, email: string) {
+  const [assignment] = await db.select({ advisorId: medicalTeamTable.advisorId })
+    .from(medicalTeamTable)
+    .innerJoin(bloomAdvisorsTable, eq(medicalTeamTable.advisorId, bloomAdvisorsTable.id))
+    .where(and(eq(medicalTeamTable.userId, userId), eq(bloomAdvisorsTable.isActive, true), eq(bloomAdvisorsTable.isVerified, true)))
+    .limit(1);
+  return { isAdmin: isBloomAdmin(email), advisorId: assignment?.advisorId ?? null };
+}
+
+export async function hasActiveMembership(userId: string) {
+  const [account] = await db.select().from(bloomAccountsTable)
+    .where(eq(bloomAccountsTable.clerkUserId, userId)).limit(1);
+  return Boolean(account?.subscriptionStatus === "active" &&
+    account.subscriptionExpiresAt && account.subscriptionExpiresAt > new Date() &&
+    (account.subscriptionPlan === "cycle" || account.subscriptionPlan === "pregnancy"));
 }
 
 export async function requireBloomMember(

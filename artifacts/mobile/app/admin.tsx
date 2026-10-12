@@ -14,7 +14,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateAdvice,
   useCreateAdvisor,
+  useAssignMedicalTeamMember,
   useGrantMembership,
+  useListMedicalTeam,
+  useRevokeMedicalTeamMember,
   useListAdminAdvisors,
   useListAdminMembers,
   useListPlans,
@@ -78,6 +81,12 @@ export default function AdminScreen() {
   const plansQuery = useListPlans();
   const membersQuery = useListAdminMembers({ query: { queryKey: ["/admin/members"], enabled: isAdmin, retry: false } });
   const advisorsQuery = useListAdminAdvisors({ query: { queryKey: ["/admin/advisors"], enabled: isAdmin, retry: false } });
+  const teamQuery = useListMedicalTeam({ query: { queryKey: ["/admin/medical-team", profile?.userId], enabled: isAdmin, retry: false } });
+  const assignTeam = useAssignMedicalTeamMember();
+  const revokeTeam = useRevokeMedicalTeamMember();
+  const [teamSearch, setTeamSearch] = useState("");
+  const [teamUser, setTeamUser] = useState<string | null>(null);
+  const [teamAdvisor, setTeamAdvisor] = useState<number | null>(null);
   const updatePlan = useUpdatePlanPrice();
   const createAdvisor = useCreateAdvisor();
   const createAdvice = useCreateAdvice();
@@ -171,6 +180,34 @@ export default function AdminScreen() {
       await queryClient.invalidateQueries();
     } catch {
       setFeedback("Could not publish advice. Check the fields and try again.");
+    }
+  };
+
+  const authorizeTeam = async () => {
+    if (!teamUser || !teamAdvisor) {
+      setFeedback("Choose a registered member and a verified advisor profile.");
+      return;
+    }
+    try {
+      await assignTeam.mutateAsync({ data: { userId: teamUser, advisorId: teamAdvisor } });
+      setTeamUser(null);
+      setTeamAdvisor(null);
+      setFeedback("Medical-team access authorised.");
+      await queryClient.invalidateQueries();
+    } catch {
+      setFeedback("Could not authorise this account.");
+    }
+  };
+
+  const revokeMember = async (member: { userId: string; username: string }) => {
+    const ok = await confirm("Revoke medical-team access", `@${member.username} will lose access to the shared inbox and can no longer answer under a verified profile.`, "Revoke access");
+    if (!ok) return;
+    try {
+      await revokeTeam.mutateAsync({ userId: member.userId });
+      setFeedback(`Revoked @${member.username}.`);
+      await queryClient.invalidateQueries();
+    } catch {
+      setFeedback("Could not revoke access.");
     }
   };
 
@@ -318,6 +355,54 @@ export default function AdminScreen() {
           <Text style={[styles.actionText, { color: colors.primaryForeground }]}>
             {createAdvice.isPending ? "Publishing…" : "Publish advice"}
           </Text>
+        </TouchableOpacity>
+      </Section>
+
+      <Section title="Medical team access">
+        <Text style={[styles.caption, { color: colors.mutedForeground }]}>
+          Link a registered member to an existing verified advisor profile. They answer under that profile and share the team inbox.
+        </Text>
+        {(teamQuery.data ?? []).map((m) => (
+          <View key={m.userId} style={[styles.listRow, { borderColor: colors.border }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>{m.name} (@{m.username})</Text>
+              <Text style={[styles.caption, { color: colors.mutedForeground }]}>Responds as {m.advisorName}</Text>
+            </View>
+            <TouchableOpacity onPress={() => revokeMember(m)} disabled={revokeTeam.isPending}>
+              <Text style={[styles.selectLabel, { color: colors.destructive }]}>Revoke</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        {teamQuery.error ? <Text style={[styles.caption, { color: colors.destructive }]}>Could not load the medical team.</Text> : null}
+        <Field label="Find a member" value={teamSearch} onChangeText={setTeamSearch} placeholder="Name, username or email" />
+        {teamSearch.trim().length > 0
+          ? (membersQuery.data ?? [])
+              .filter((m) => `${m.name ?? ""} ${m.username ?? ""} ${m.email}`.toLowerCase().includes(teamSearch.trim().toLowerCase()))
+              .slice(0, 6)
+              .map((m) => (
+                <TouchableOpacity key={m.userId} onPress={() => setTeamUser(m.userId)} style={[styles.listRow, { borderColor: teamUser === m.userId ? colors.primary : colors.border }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rowTitle, { color: colors.foreground }]}>{m.name || m.username || m.email}</Text>
+                    <Text style={[styles.caption, { color: colors.mutedForeground }]}>{m.email}</Text>
+                  </View>
+                  <Text style={[styles.selectLabel, { color: colors.primary }]}>{teamUser === m.userId ? "Selected" : "Select"}</Text>
+                </TouchableOpacity>
+              ))
+          : null}
+        <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 14 }]}>Responding profile</Text>
+        <View style={styles.chips}>
+          {(advisorsQuery.data ?? []).filter((a) => a.isVerified).map((a) => (
+            <TouchableOpacity key={a.id} onPress={() => setTeamAdvisor(a.id)} style={[styles.chip, { backgroundColor: teamAdvisor === a.id ? colors.primary : colors.card, borderColor: colors.border }]}>
+              <Text style={{ color: teamAdvisor === a.id ? colors.primaryForeground : colors.foreground, fontFamily: "Nunito_600SemiBold", fontSize: 12 }}>{a.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity
+          onPress={authorizeTeam}
+          disabled={assignTeam.isPending || !teamUser || !teamAdvisor}
+          style={[styles.actionButton, { backgroundColor: colors.primary, opacity: teamUser && teamAdvisor ? 1 : 0.55 }]}
+        >
+          <Text style={[styles.actionText, { color: colors.primaryForeground }]}>{assignTeam.isPending ? "Authorising…" : "Authorise medical-team access"}</Text>
         </TouchableOpacity>
       </Section>
 

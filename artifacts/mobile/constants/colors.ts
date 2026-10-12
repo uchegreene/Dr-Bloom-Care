@@ -27,6 +27,7 @@ const colors = {
 
     destructive: "#ef5350",
     destructiveForeground: "#ffffff",
+    verified: "#1684E8",
 
     border: "#f0e6e6",
     input: "#f0e6e6",
@@ -55,6 +56,7 @@ const colors = {
 
     destructive: "#e57373",
     destructiveForeground: "#ffffff",
+    verified: "#66B4FF",
 
     border: "#4a3535",
     input: "#4a3535",

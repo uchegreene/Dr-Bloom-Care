@@ -1,210 +1,178 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter, type Href } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-  Platform,
-} from 'react-native';
-import { useColors } from '@/hooks/useColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChat, Friend } from '@/hooks/useChatContext';
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+  useListAdvisors,
+  useListMedicalConversations,
+  useStartMedicalConversation,
+} from "@workspace/api-client-react";
+import { useColors } from "@/hooks/useColors";
+import { POLL_MS, errorMessage, useMedicalAccess } from "@/hooks/useMedicalAccess";
+import { Empty, ErrorBox, Notice, SkeletonRows, TEAM_DISCLOSURE, VerifiedBadge } from "@/components/MedicalUi";
 
-export default function ChatScreen() {
+export default function ChatTab() {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { friends, addFriend } = useChat();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [name, setName] = useState('');
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { userId, ready, canInteract, isStaff } = useMedicalAccess();
+  const [view, setView] = useState<"chats" | "team">("chats");
+  const [advisorId, setAdvisorId] = useState<number | null>(null);
+  const [topic, setTopic] = useState("");
+  const [first, setFirst] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState("");
+  const enabled = ready && canInteract;
+  const convos = useListMedicalConversations({
+    query: { queryKey: ["medical", "conversations", userId], enabled, refetchInterval: POLL_MS },
+  });
+  const advisors = useListAdvisors({ query: { queryKey: ["advisors", userId], enabled: enabled && !isStaff } });
+  const start = useStartMedicalConversation();
+  const top = Platform.OS === "web" ? 67 : insets.top;
+  const selected = advisors.data?.find((a) => a.id === advisorId);
 
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomInset = Platform.OS === 'web' ? 100 : insets.bottom + 90;
-
-  const handleAdd = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    await addFriend(trimmed);
-    setName('');
-    setModalVisible(false);
+  const begin = async () => {
+    setError("");
+    if (!advisorId) return setError("Choose a medical profile.");
+    if (topic.trim().length < 3) return setError("Give the topic a short title (3+ characters).");
+    if (!first.trim()) return setError("Write your first message.");
+    if (!agreed) return setError("Please confirm you understand who can see this conversation.");
+    try {
+      const c = await start.mutateAsync({ data: { advisorId, topic: topic.trim(), firstMessage: first.trim() } });
+      await qc.invalidateQueries({ queryKey: ["medical"] });
+      setTopic("");
+      setFirst("");
+      setAgreed(false);
+      setAdvisorId(null);
+      setView("chats");
+      router.push(`/chat/${c.id}` as Href);
+    } catch (e) {
+      setError(errorMessage(e, "Could not start the conversation."));
+    }
   };
 
-  const renderFriend = ({ item }: { item: Friend }) => (
-    <TouchableOpacity
-      style={[styles.row, { borderBottomColor: colors.border }]}
-      activeOpacity={0.7}
-      onPress={() => router.push(`/chat/${item.id}`)}
-    >
-      <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-        <Text style={[styles.avatarText, { color: colors.primary }]}>{item.avatarInitials}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.name, { color: colors.foreground }]}>{item.name}</Text>
-        {!!item.lastMessage && (
-          <Text style={[styles.preview, { color: colors.mutedForeground }]} numberOfLines={1}>
-            {item.lastMessage}
-          </Text>
-        )}
-      </View>
-      <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-    </TouchableOpacity>
+  const list = (
+    <FlatList
+      data={convos.error || !enabled ? [] : convos.data ?? []}
+      keyExtractor={(c) => String(c.id)}
+      contentContainerStyle={{ padding: 18, paddingBottom: 60, flexGrow: 1 }}
+      refreshControl={<RefreshControl refreshing={convos.isRefetching} onRefresh={() => convos.refetch()} tintColor={colors.primary} />}
+      ListEmptyComponent={
+        convos.isLoading ? <SkeletonRows /> : convos.error ? <ErrorBox message="Could not load conversations." onRetry={() => convos.refetch()} /> : (
+          <Empty icon="message-circle" title={isStaff ? "Inbox is clear" : "No conversations yet"} body={isStaff ? "Member messages to the team appear here for everyone on the team." : "Pick a medical profile and start a private topic."} />
+        )
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          onPress={() => router.push(`/chat/${item.id}` as Href)}
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.topic, { color: colors.foreground }]} numberOfLines={1}>{item.topic}</Text>
+            <Text style={[styles.muted, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {isStaff ? `@${item.memberUsername} to ` : "With "}{item.advisorName} · {item.advisorSpecialty}
+            </Text>
+            <Text style={[styles.last, { color: colors.foreground }]} numberOfLines={2}>{item.lastMessage}</Text>
+          </View>
+          <Text style={[styles.muted, { color: colors.mutedForeground }]}>{formatDistanceToNow(new Date(item.updatedAt), { addSuffix: false })}</Text>
+        </TouchableOpacity>
+      )}
+    />
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topInset + 12 }]}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Messages</Text>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => setModalVisible(true)}
-          activeOpacity={0.8}
-        >
-          <Feather name="user-plus" size={18} color={colors.primaryForeground} />
-        </TouchableOpacity>
+    <View style={[styles.page, { backgroundColor: colors.background, paddingTop: top }]}>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: colors.foreground }]}>{isStaff ? "Team inbox" : "Care team"}</Text>
+        {isStaff ? (
+          <TouchableOpacity onPress={() => router.push("/medical-team" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]}>
+            <Feather name="help-circle" size={15} color={colors.primary} />
+            <Text style={[styles.pillText, { color: colors.primary }]}>Tagged posts</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
-
-      <FlatList
-        data={friends}
-        keyExtractor={f => f.id}
-        renderItem={renderFriend}
-        contentContainerStyle={{ paddingBottom: bottomInset, paddingHorizontal: 20 }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Feather name="users" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No friends yet. Add someone to start chatting.
+      <View style={{ paddingHorizontal: 18 }}>
+        <Notice icon="shield">{TEAM_DISCLOSURE}</Notice>
+        {!isStaff ? (
+          <View style={[styles.segment, { backgroundColor: colors.muted }]}>
+            {([["chats", "My conversations"], ["team", "Start a topic"]] as const).map(([k, label]) => (
+              <TouchableOpacity key={k} onPress={() => setView(k)} style={[styles.segBtn, view === k && { backgroundColor: colors.card }]}>
+                <Text style={[styles.segText, { color: view === k ? colors.foreground : colors.mutedForeground }]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+      </View>
+      {view === "chats" || isStaff ? (
+        list
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
+          <Text style={[styles.label, { color: colors.foreground }]}>Who would you like to ask?</Text>
+          {advisors.isLoading ? <SkeletonRows count={2} /> : null}
+          {advisors.error ? <ErrorBox message="Could not load profiles." onRetry={() => advisors.refetch()} /> : null}
+          {(advisors.data ?? []).map((a) => {
+            const on = a.id === advisorId;
+            return (
+              <TouchableOpacity key={a.id} onPress={() => setAdvisorId(a.id)} style={[styles.card, { backgroundColor: on ? colors.secondary : colors.card, borderColor: on ? colors.primary : colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.inline}>
+                    <Text style={[styles.topic, { color: colors.foreground }]}>{a.name}</Text>
+                    {a.isVerified ? <VerifiedBadge label="Verified" /> : null}
+                  </View>
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>{a.title} · {a.specialty}</Text>
+                  <Text style={[styles.muted, { color: colors.mutedForeground }]}>{a.credentials}</Text>
+                  <Text style={[styles.last, { color: colors.foreground }]} numberOfLines={on ? undefined : 2}>{a.bio}</Text>
+                </View>
+                <Feather name={on ? "check-circle" : "circle"} size={20} color={on ? colors.primary : colors.mutedForeground} />
+              </TouchableOpacity>
+            );
+          })}
+          {!advisors.isLoading && (advisors.data?.length ?? 0) === 0 && !advisors.error ? (
+            <Empty icon="user-x" title="No profiles available" body="Verified medical profiles will appear here." />
+          ) : null}
+          <Text style={[styles.label, { color: colors.foreground }]}>Topic</Text>
+          <TextInput value={topic} onChangeText={setTopic} maxLength={180} placeholder="e.g. Irregular cycles after stopping the pill" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]} />
+          <Text style={[styles.label, { color: colors.foreground }]}>Your message</Text>
+          <TextInput value={first} onChangeText={setFirst} maxLength={6000} multiline placeholder="Describe what is happening…" placeholderTextColor={colors.mutedForeground} style={[styles.input, { minHeight: 110, textAlignVertical: "top", color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]} />
+          <TouchableOpacity onPress={() => setAgreed((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} style={styles.check}>
+            <Feather name={agreed ? "check-square" : "square"} size={20} color={colors.primary} />
+            <Text style={[styles.muted, { flex: 1, color: colors.foreground, lineHeight: 18 }]}>
+              I understand the whole medical team can read this conversation, a team member may reply
+              {selected ? ` under their own profile rather than ${selected.name}'s` : " under their own profile"}, and Bloom is not an emergency service.
             </Text>
-          </View>
-        }
-      />
-
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add a friend</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Friend's name"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
-              autoFocus
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity onPress={() => { setName(''); setModalVisible(false); }} style={styles.modalBtn}>
-                <Text style={[styles.modalBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleAdd} style={[styles.modalBtn, { backgroundColor: colors.primary, borderRadius: 12 }]}>
-                <Text style={[styles.modalBtnText, { color: colors.primaryForeground }]}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+          </TouchableOpacity>
+          {error ? <Text style={[styles.err, { color: colors.destructive }]}>{error}</Text> : null}
+          <TouchableOpacity onPress={begin} disabled={start.isPending} style={[styles.btn, { backgroundColor: colors.primary, opacity: start.isPending ? 0.6 : 1 }]}>
+            <Text style={[styles.btnText, { color: colors.primaryForeground }]}>{start.isPending ? "Sending…" : "Send privately"}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  title: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 30,
-  },
-  addBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 18,
-  },
-  name: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 17,
-  },
-  preview: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-    gap: 12,
-  },
-  emptyText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  modalCard: {
-    borderRadius: 20,
-    padding: 24,
-  },
-  modalTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 20,
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 16,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 20,
-  },
-  modalBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  modalBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-  },
+  page: { flex: 1 },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 14 },
+  title: { fontFamily: "Nunito_700Bold", fontSize: 28 },
+  pill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  pillText: { fontFamily: "Nunito_700Bold", fontSize: 13 },
+  segment: { flexDirection: "row", borderRadius: 14, padding: 4, marginTop: 12 },
+  segBtn: { flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center" },
+  segText: { fontFamily: "Nunito_700Bold", fontSize: 13 },
+  card: { flexDirection: "row", gap: 10, borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 10 },
+  topic: { fontFamily: "Nunito_700Bold", fontSize: 15 },
+  muted: { fontFamily: "Nunito_400Regular", fontSize: 12.5 },
+  last: { fontFamily: "Nunito_400Regular", fontSize: 14, lineHeight: 20, marginTop: 6 },
+  inline: { flexDirection: "row", alignItems: "center", gap: 8 },
+  label: { fontFamily: "Nunito_700Bold", fontSize: 14, marginTop: 14, marginBottom: 10 },
+  input: { minHeight: 46, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontFamily: "Nunito_400Regular", fontSize: 15 },
+  check: { flexDirection: "row", gap: 10, marginTop: 16, alignItems: "flex-start" },
+  err: { fontFamily: "Nunito_700Bold", fontSize: 13, marginTop: 12 },
+  btn: { minHeight: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 16 },
+  btnText: { fontFamily: "Nunito_700Bold", fontSize: 15 },
 });

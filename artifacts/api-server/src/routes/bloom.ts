@@ -19,6 +19,7 @@ import {
   requireBloomAdmin,
   requireBloomMember,
   requireBloomProfile,
+  medicalAccessFor,
   type BloomRequest,
 } from "../middlewares/bloomAuth";
 
@@ -62,7 +63,7 @@ async function ensureAccount(userId: string, email: string) {
   return created;
 }
 
-function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean) {
+function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean, advisorId: number | null = null) {
   const subscriptionStatus = statusFor(
     account.subscriptionStatus,
     account.subscriptionExpiresAt,
@@ -76,7 +77,8 @@ function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmi
     bio: account.bio,
     femaleOnlyConfirmed: account.femaleOnlyConfirmed,
     mode: account.mode as "cycle" | "pregnant" | "none",
-    role: isAdmin ? "admin" : "member",
+    role: isAdmin ? "admin" : advisorId ? "medical_team" : "member",
+    advisorId,
     subscriptionPlan: account.subscriptionPlan as "cycle" | "pregnancy" | null,
     subscriptionStatus,
     subscriptionExpiresAt: account.subscriptionExpiresAt,
@@ -103,7 +105,8 @@ router.get("/account", requireBloomMember, async (req, res) => {
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
-  res.json(accountResponse(account, admins.includes(bloomEmail!)));
+  const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
+  res.json(accountResponse(account, admins.includes(bloomEmail!), access.advisorId));
 });
 
 router.put("/account", requireBloomMember, async (req, res) => {
@@ -156,7 +159,8 @@ router.put("/account", requireBloomMember, async (req, res) => {
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean);
-    res.json(accountResponse(account, admins.includes(bloomEmail!)));
+    const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
+    res.json(accountResponse(account, admins.includes(bloomEmail!), access.advisorId));
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
       res.status(409).json({ error: "That username is already in use." });

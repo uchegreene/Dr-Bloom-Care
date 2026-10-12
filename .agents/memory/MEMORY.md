@@ -5,3 +5,4 @@
 - [Membership policy](membership-policy.md) — free read-only accounts, independent mode selection, explicit admin authorization, and manual-payment boundaries.
 - [Artifact service routing](artifact-service-routing.md) — directory names do not define HTTP prefixes; wrong API addresses can return catch-all HTML with a successful status.
 - [Cross-platform confirmations](expo-confirmations.md) — critical confirmations need an in-app modal; React Native Alert can silently do nothing in web previews.
+- [Medical-team inbox policy](medical-team-policy.md) — paid members tag profiles and DM a shared care team; specialists answer under their own verified identities.
