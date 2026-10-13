@@ -37,7 +37,20 @@ export default function PostCreate() {
   const [done, setDone] = useState(false);
 
   if (!ready) return null;
-  if (!canInteract) return <Redirect href="/(tabs)/community" />;
+  if (!canInteract) return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScreenHeader title="Write a post" />
+      <View style={{ padding: 20, gap: 18 }}>
+        <Notice icon="lock">Posting, commenting and tagging medical profiles require an active subscription. Free accounts can still read the timeline. Your account and posts have not been deleted.</Notice>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} style={{ padding: 16, backgroundColor: colors.primary, borderRadius: 14 }}>
+          <Text style={{ color: colors.primaryForeground, fontFamily: "Nunito_700Bold" }}>View subscription plans</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/community-demo" as never)} style={{ padding: 16 }}>
+          <Text style={{ color: colors.primary, fontFamily: "Nunito_700Bold" }}>Try posting, likes and comments with sample data</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
   if (done) return <Redirect href="/(tabs)/community" />;
 
   const pick = async () => {

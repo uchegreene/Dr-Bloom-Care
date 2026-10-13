@@ -8,8 +8,6 @@ import {
 import {
   CreateAdviceBody,
   CreateAdvisorBody,
-  GrantMembershipBody,
-  RequestSubscriptionBody,
   UpdateAccountBody,
   UpdatePlanPriceBody,
 } from "@workspace/api-zod";
@@ -178,29 +176,8 @@ router.get("/plans", requireBloomMember, async (_req, res) => {
 });
 
 router.post("/subscription-request", requireBloomProfile, async (req, res) => {
-  const parsed = RequestSubscriptionBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Choose a valid plan." });
-    return;
-  }
-  const { bloomUserId } = req as BloomRequest;
-  const requestedAt = new Date();
-  const [account] = await db
-    .update(bloomAccountsTable)
-    .set({
-      requestedPlan: parsed.data.plan,
-      requestedAt,
-      updatedAt: requestedAt,
-    })
-    .where(eq(bloomAccountsTable.clerkUserId, bloomUserId!))
-    .returning();
-  if (!account) {
-    res.status(404).json({ error: "Complete your profile first." });
-    return;
-  }
-  res.json({
-    requestedPlan: account.requestedPlan,
-    requestedAt: account.requestedAt,
+  res.status(503).json({
+    error: "Manual payment approval has been retired. Connect subscription billing to activate access automatically after a verified payment.",
   });
 });
 
@@ -373,57 +350,8 @@ router.post(
   "/admin/members/:userId/subscription",
   requireBloomAdmin,
   async (req, res) => {
-    const parsed = GrantMembershipBody.safeParse(req.body);
-    if (!parsed.success || parsed.data.confirmedPayment !== true) {
-      res.status(400).json({
-        error: "Confirm payment was verified outside the app before activation.",
-      });
-      return;
-    }
-    const userId = String(req.params.userId);
-    const [account] = await db
-      .select()
-      .from(bloomAccountsTable)
-      .where(eq(bloomAccountsTable.clerkUserId, userId))
-      .limit(1);
-    if (!account) {
-      res.status(404).json({ error: "Member account not found." });
-      return;
-    }
-    const now = new Date();
-    const existingExpiry = account.subscriptionExpiresAt;
-    const anchor =
-      account.subscriptionStatus === "active" &&
-      account.subscriptionPlan === parsed.data.plan &&
-      existingExpiry &&
-      existingExpiry > now
-        ? new Date(existingExpiry)
-        : now;
-    anchor.setMonth(anchor.getMonth() + parsed.data.months);
-    const [updated] = await db
-      .update(bloomAccountsTable)
-      .set({
-        subscriptionPlan: parsed.data.plan,
-        subscriptionStatus: "active",
-        subscriptionExpiresAt: anchor,
-        requestedPlan: null,
-        requestedAt: null,
-        updatedAt: now,
-      })
-      .where(eq(bloomAccountsTable.clerkUserId, userId))
-      .returning();
-    res.json({
-      userId: updated.clerkUserId,
-      email: updated.email,
-      username: updated.username,
-      name: updated.name,
-      mode: updated.mode,
-      subscriptionPlan: updated.subscriptionPlan,
-      subscriptionStatus: statusFor(
-        updated.subscriptionStatus,
-        updated.subscriptionExpiresAt,
-      ),
-      subscriptionExpiresAt: updated.subscriptionExpiresAt,
+    res.status(409).json({
+      error: "Paid subscriptions do not require admin approval. Activation must come from verified subscription billing.",
     });
   },
 );

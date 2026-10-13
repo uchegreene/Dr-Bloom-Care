@@ -48,6 +48,7 @@ function RootLayoutNav() {
       <Stack.Screen name="pregnancy-log" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="reminders" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="community-demo" options={{ headerShown: false }} />
       <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="medical-team" options={{ headerShown: false }} />

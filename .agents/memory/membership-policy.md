@@ -1,6 +1,6 @@
 ---
 name: Bloom membership policy
-description: Business rules for free accounts, mode switching, manual payments, and professional verification.
+description: Business rules for free accounts, mode switching, automatic paid membership and professional verification.
 ---
 
 Free registration uses email/password with a public username. Free members may read posts but may not publish, ask/tag admins, or log cycle/pregnancy information. Mode selection is independent of payment: members can always change modes, while logging requires the matching active plan.
@@ -15,11 +15,17 @@ Administrator identities must be explicitly authorized by the owner, never throu
 
 **How to apply:** Never auto-promote the first account or manufacture a verified professional. Keep initial admin tools locked until the intended identity is provided.
 
-This phase has no approved payment integration. Only manual administrator activation after checking external payment is available; do not collect card details or claim automatic charges/renewals.
+Paid subscriptions must activate automatically after provider-verified payment, without administrator approval, and access ends when the paid period expires. Do not grant access merely because someone selected a plan or clicked a payment confirmation.
 
-**Why:** The user chose to continue without connecting a payment service.
+**Why:** The owner explicitly replaced the earlier manual-payment decision with automatic activation and expiry. Administrator verification of professional credentials and medical approval of AI tips remain separate requirements.
 
-**How to apply:** Preserve explicit manual-payment wording until a real provider is connected.
+**How to apply:** Connect real subscription billing and verify transactions on the backend. If payment setup is incomplete, say so explicitly rather than pretending purchases work or restoring manual approval.
+
+Keep Timeline, Chat and the posting entry point discoverable, even when paid actions are locked. Provide clearly labelled, isolated sample posts/chat for testing likes, comments and publishing without changing actual membership permissions.
+
+**Why:** The owner reported that subscription gating made these features appear removed and explicitly asked to retain interactive sample content for testing.
+
+**How to apply:** Show a lock explanation instead of removing navigation. Never mix fictional medical professionals or demo conversations into the real care team, real community or private health records.
 
 Do not automatically import anonymous prototype records or fabricate health history for a newly registered account.
 

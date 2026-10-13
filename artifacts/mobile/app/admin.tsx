@@ -15,7 +15,6 @@ import {
   useCreateAdvice,
   useCreateAdvisor,
   useAssignMedicalTeamMember,
-  useGrantMembership,
   useListMedicalTeam,
   useRevokeMedicalTeamMember,
   useListAdminAdvisors,
@@ -90,7 +89,6 @@ export default function AdminScreen() {
   const updatePlan = useUpdatePlanPrice();
   const createAdvisor = useCreateAdvisor();
   const createAdvice = useCreateAdvice();
-  const grantMembership = useGrantMembership();
   const [cyclePrice, setCyclePrice] = useState("");
   const [pregnancyPrice, setPregnancyPrice] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -211,28 +209,6 @@ export default function AdminScreen() {
     }
   };
 
-  const activatePlan = async (member: NonNullable<typeof membersQuery.data>[number]) => {
-    const plan =
-      member.requestedPlan ??
-      (member.mode === "pregnant" ? "pregnancy" : "cycle");
-    const fee = plansQuery.data?.find((entry) => entry.plan === plan)?.priceNaira;
-    const accepted = await confirm(
-      "Verify payment before activation",
-      `Only continue after you have checked the member’s external payment${fee == null ? "" : ` of ${formatNaira(fee)}`}. This activates ${plan} for one month.`,
-      "Payment checked — activate",
-    );
-    if (!accepted) return;
-    try {
-      await grantMembership.mutateAsync({
-        userId: member.userId,
-        data: { plan, months: 1, confirmedPayment: true },
-      });
-      setFeedback(`Activated ${plan} for @${member.username || member.email}.`);
-      await queryClient.invalidateQueries();
-    } catch {
-      setFeedback("Could not activate the membership.");
-    }
-  };
 
   return (
     <ScrollView
@@ -247,7 +223,7 @@ export default function AdminScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>Admin tools</Text>
       </View>
       <Text style={[styles.caption, { color: colors.mutedForeground }]}>
-        Fees, manual payment verification, and professional advice publishing.
+        Fees, member subscription status, and professional advice publishing. Paid subscriptions do not require admin approval.
       </Text>
       <TouchableOpacity onPress={() => router.push("/daily-tip-review" as never)} style={{ paddingVertical: 8 }}>
         <Text style={{ fontFamily: "Nunito_700Bold", fontSize: 14, color: colors.primary }}>Review daily health tips</Text>
@@ -409,11 +385,9 @@ export default function AdminScreen() {
         </TouchableOpacity>
       </Section>
 
-      <Section title="Member payment requests">
+      <Section title="Member subscriptions">
         {membersQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
         {(membersQuery.data ?? []).map((member) => {
-          const requested = member.requestedPlan;
-          const plan = requested ?? (member.mode === "pregnant" ? "pregnancy" : "cycle");
           return (
             <View key={member.userId} style={[styles.memberCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
               <Text style={[styles.rowTitle, { color: colors.foreground }]}>
@@ -423,19 +397,11 @@ export default function AdminScreen() {
                 {member.email} · @{member.username || "no username"}
               </Text>
               <Text style={[styles.caption, { color: colors.mutedForeground, marginTop: 4 }]}>
-                {requested ? `Requested: ${requested} plan` : "No payment request"} · Status: {member.subscriptionStatus}
+                Plan: {member.subscriptionPlan ?? "Free"} · Status: {member.subscriptionStatus}
               </Text>
-              {requested && (
-                <TouchableOpacity
-                  onPress={() => activatePlan(member)}
-                  disabled={grantMembership.isPending}
-                  style={[styles.actionButton, { backgroundColor: colors.primary, marginTop: 10 }]}
-                >
-                  <Text style={[styles.actionText, { color: colors.primaryForeground }]}>
-                    Verify payment and activate {plan}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <Text style={[styles.caption, { color: colors.mutedForeground, marginTop: 4 }]}>
+                {member.subscriptionExpiresAt ? `Expires: ${new Date(member.subscriptionExpiresAt).toLocaleString()}` : "No active paid period"}
+              </Text>
             </View>
           );
         })}

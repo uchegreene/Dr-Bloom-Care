@@ -13,7 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
 import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useListPlans, useRemoveDailyTipDevice, useRequestSubscription } from "@workspace/api-client-react";
+import { useListPlans, useRemoveDailyTipDevice } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useConfirmation } from "@/hooks/useConfirmation";
 import { getTipDeviceId, useUnreadTipCount, useTipEligibility } from "@/hooks/useDailyTips";
@@ -39,7 +39,6 @@ export default function ProfileScreen() {
   const { profile, updateProfile, refreshAccount } = useProfile();
   const { signOut } = useAuth();
   const plansQuery = useListPlans();
-  const requestMutation = useRequestSubscription();
   const removeTipDevice = useRemoveDailyTipDevice();
   const unreadTips = useUnreadTipCount();
   const { eligible: tipsEligible } = useTipEligibility();
@@ -101,24 +100,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const requestActivation = async () => {
-    if (!selectedPlan || selectedFee == null) return;
-    const accepted = await confirm(
-      "Confirm external payment",
-      `Dr Bloom Care does not take payment in the app. Only continue after paying ${formatNaira(selectedFee)} outside Dr Bloom Care. An administrator will verify your payment before activating ${selectedPlan === "cycle" ? "cycle" : "pregnancy"} tracking.`,
-      "I have paid",
-      "Not yet",
-    );
-    if (!accepted) return;
-    try {
-      await requestMutation.mutateAsync({ data: { plan: selectedPlan } });
-      await refreshAccount();
-      setNotice("Request sent. An administrator can now review your activation request.");
-      setError("");
-    } catch {
-      setError("We could not send the request. Check your connection and try again.");
-    }
-  };
 
   const handleSignOut = async () => {
     try {
@@ -185,28 +166,9 @@ export default function ProfileScreen() {
               {"  "}
               {selectedFee != null ? `${formatNaira(selectedFee)} / month` : ""}
             </Text>
-            {profile?.requestedPlan === selectedPlan ? (
-              <View style={styles.pending}>
-                <Feather name="clock" size={17} color="#9A6700" />
-                <Text style={styles.pendingText}>Payment verification request sent</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={[styles.smallText, { color: colors.mutedForeground, marginTop: 6 }]}>
-                  Payment is handled outside Dr Bloom Care. An administrator activates the plan after checking payment.
-                </Text>
-                <TouchableOpacity
-                  onPress={requestActivation}
-                  disabled={requestMutation.isPending || selectedFee == null}
-                  style={[styles.secondaryButton, { borderColor: colors.primary, opacity: requestMutation.isPending ? 0.6 : 1 }]}
-                >
-                  {requestMutation.isPending ? <ActivityIndicator color={colors.primary} /> : null}
-                  <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-                    I’ve paid externally — request activation
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <Text style={[styles.smallText, { color: colors.mutedForeground, marginTop: 8 }]}>
+              Subscriptions will activate automatically after a verified payment, without admin approval, and access ends when the paid period expires. Payments are not connected yet, so no purchase can be processed here. Do not send an external payment using the old approval process.
+            </Text>
           </>
         )}
         {!selectedPlan && (
@@ -249,7 +211,7 @@ export default function ProfileScreen() {
       {notice ? <Text style={[styles.error, { color: colors.primary }]}>{notice}</Text> : null}
       {profile?.requestedPlan ? (
         <Text style={[styles.error, { color: colors.mutedForeground }]}>
-          Pending {profile.requestedPlan} activation request. Access starts only after the administrator verifies your payment.
+          An older {profile.requestedPlan} request is on record. The manual approval flow has been retired; this request does not grant paid access or confirm payment.
         </Text>
       ) : null}
       <TouchableOpacity

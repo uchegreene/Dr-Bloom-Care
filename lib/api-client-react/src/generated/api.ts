@@ -51,7 +51,6 @@ import type {
   MembershipGrantInput,
   PlanPriceInput,
   PlanPricing,
-  SubscriptionRequest,
   SubscriptionRequestInput
 } from './api.schemas';
 
@@ -1199,11 +1198,12 @@ export const getRequestSubscriptionUrl = () => {
 }
 
 /**
- * @summary Tell the administrator a plan fee has been paid outside Bloom
+ * @deprecated
+ * @summary Retired manual payment request
  */
-export const requestSubscription = async (subscriptionRequestInput: SubscriptionRequestInput, options?: RequestInit): Promise<SubscriptionRequest> => {
+export const requestSubscription = async (subscriptionRequestInput: SubscriptionRequestInput, options?: RequestInit): Promise<unknown> => {
 
-  return customFetch<SubscriptionRequest>(getRequestSubscriptionUrl(),
+  return customFetch<unknown>(getRequestSubscriptionUrl(),
   {
     ...options,
     method: 'POST',
@@ -1215,7 +1215,7 @@ export const requestSubscription = async (subscriptionRequestInput: Subscription
 
 
 
-export const getRequestSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+export const getRequestSubscriptionMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSubscription>>, TError,{data: BodyType<SubscriptionRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof requestSubscription>>, TError,{data: BodyType<SubscriptionRequestInput>}, TContext> => {
 
@@ -1244,12 +1244,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RequestSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof requestSubscription>>>
     export type RequestSubscriptionMutationBody = BodyType<SubscriptionRequestInput>
-    export type RequestSubscriptionMutationError = ErrorType<unknown>
+    export type RequestSubscriptionMutationError = ErrorType<void>
 
     /**
- * @summary Tell the administrator a plan fee has been paid outside Bloom
+ * @deprecated
+ * @summary Retired manual payment request
  */
-export const useRequestSubscription = <TError = ErrorType<unknown>,
+export const useRequestSubscription = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSubscription>>, TError,{data: BodyType<SubscriptionRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof requestSubscription>>,
@@ -1788,12 +1789,13 @@ export const getGrantMembershipUrl = (userId: string,) => {
 }
 
 /**
- * @summary Manually activate a paid plan after external payment verification
+ * @deprecated
+ * @summary Retired administrator subscription activation
  */
 export const grantMembership = async (userId: string,
-    membershipGrantInput: MembershipGrantInput, options?: RequestInit): Promise<AdminMember> => {
+    membershipGrantInput: MembershipGrantInput, options?: RequestInit): Promise<unknown> => {
 
-  return customFetch<AdminMember>(getGrantMembershipUrl(userId),
+  return customFetch<unknown>(getGrantMembershipUrl(userId),
   {
     ...options,
     method: 'POST',
@@ -1837,7 +1839,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type GrantMembershipMutationError = ErrorType<void>
 
     /**
- * @summary Manually activate a paid plan after external payment verification
+ * @deprecated
+ * @summary Retired administrator subscription activation
  */
 export const useGrantMembership = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantMembership>>, TError,{userId: string;data: BodyType<MembershipGrantInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

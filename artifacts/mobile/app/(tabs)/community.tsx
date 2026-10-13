@@ -106,7 +106,7 @@ export default function CommunityScreen() {
   const header = (
     <View>
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Community</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Timeline</Text>
         {tipsEligible ? (
           <TouchableOpacity onPress={() => router.push("/daily-tips" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]}>
             <Feather name="sun" size={15} color={colors.primary} />
@@ -119,6 +119,16 @@ export default function CommunityScreen() {
             <Text style={[styles.pillText, { color: colors.primary }]}>Team inbox</Text>
           </TouchableOpacity>
         ) : null}
+      </View>
+      <View style={[styles.titleRow, { gap: 8 }]}>
+        <TouchableOpacity onPress={() => router.push("/post-create" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]} accessibilityLabel="Write a post">
+          <Feather name="edit-2" size={16} color={colors.primary} />
+          <Text style={[styles.pillText, { color: colors.primary }]}>Write a post</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/community-demo" as Href)} style={[styles.pill, { backgroundColor: colors.secondary }]}>
+          <Feather name="play-circle" size={16} color={colors.primary} />
+          <Text style={[styles.pillText, { color: colors.primary }]}>Try sample posts & chat</Text>
+        </TouchableOpacity>
       </View>
       <View style={[styles.segment, { backgroundColor: colors.muted }]}>
         {(["posts", "advice"] as const).map((k) => (
@@ -196,7 +206,7 @@ export default function CommunityScreen() {
           )}
         />
       )}
-      {canInteract ? (
+      {ready ? (
         <TouchableOpacity
           onPress={() => router.push("/post-create" as Href)}
           accessibilityLabel="Write a post"

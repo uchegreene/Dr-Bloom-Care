@@ -10,11 +10,9 @@ import { useProfile } from "@/hooks/useProfileContext";
 function ClassicTabLayout({
   canUseCycle,
   canUsePregnancy,
-  canChat,
 }: {
   canUseCycle: boolean;
   canUsePregnancy: boolean;
-  canChat: boolean;
 }) {
   const colors = useColors();
   const isIOS = Platform.OS === "ios";
@@ -62,7 +60,7 @@ function ClassicTabLayout({
       <Tabs.Screen
         name="community"
         options={{
-          title: "Community",
+          title: "Timeline",
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.3" tintColor={color} size={24} />
@@ -75,7 +73,7 @@ function ClassicTabLayout({
         name="chat"
         options={{
           title: "Chat",
-          href: canChat ? "/(tabs)/chat" : null,
+          href: "/(tabs)/chat",
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="message" tintColor={color} size={24} />
@@ -118,11 +116,6 @@ export default function TabLayout() {
     profile?.subscriptionActive === true &&
     profile.subscriptionPlan === "pregnancy" &&
     profile.mode === "pregnant";
-  const role: string | undefined = profile?.role;
-  const isStaff =
-    role === "admin" ||
-    (role === "medical_team" && (profile as { advisorId?: number | null }).advisorId != null);
-  const canChat = profile?.subscriptionActive === true || isStaff;
 
   if (!profile?.profileComplete) return <Redirect href="/" />;
   if (pathname.endsWith("/cycle") && !canUseCycle) {
@@ -131,15 +124,11 @@ export default function TabLayout() {
   if (pathname.endsWith("/pregnancy") && !canUsePregnancy) {
     return <Redirect href="/(tabs)/community" />;
   }
-  if (pathname.endsWith("/chat") && !canChat) {
-    return <Redirect href="/(tabs)/community" />;
-  }
 
   return (
     <ClassicTabLayout
       canUseCycle={canUseCycle}
       canUsePregnancy={canUsePregnancy}
-      canChat={canChat}
     />
   );
 }

@@ -55,6 +55,21 @@ export default function ChatTab() {
     }
   };
 
+  if (ready && !canInteract) return (
+    <View style={[styles.page, { backgroundColor: colors.background, paddingTop: top }]}>
+      <View style={styles.titleRow}><Text style={[styles.title, { color: colors.foreground }]}>Chat</Text></View>
+      <View style={{ padding: 18, gap: 18 }}>
+        <Notice icon="lock">Chat has not been removed. An active subscription lets you send private questions to the medical team. Existing conversations remain saved when your subscription expires.</Notice>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} style={[styles.btn, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.btnText, { color: colors.primaryForeground }]}>View subscription plans</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/community-demo?tab=chat" as Href)} style={styles.pill}>
+          <Text style={[styles.pillText, { color: colors.primary }]}>Try sample chat</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const list = (
     <FlatList
       data={convos.error || !enabled ? [] : convos.data ?? []}

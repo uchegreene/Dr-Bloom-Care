@@ -8,6 +8,8 @@ import React, {
   type ReactNode,
 } from "react";
 import { useAuth } from "@clerk/expo";
+import { AppState } from "react-native";
+import { paidAccessAt } from "@/lib/subscriptionAccess";
 import {
   useGetAccount,
   useUpdateAccount,
@@ -61,13 +63,14 @@ function mapAccount(account: MemberAccount): Profile {
     role: account.role,
     advisorId: account.advisorId,
     subscriptionPlan: account.subscriptionPlan,
-    subscriptionStatus: account.subscriptionStatus,
+    subscriptionStatus: account.subscriptionStatus === "active" && !paidAccessAt(true, account.subscriptionExpiresAt ? String(account.subscriptionExpiresAt) : null)
+      ? "expired" : account.subscriptionStatus,
     subscriptionExpiresAt: account.subscriptionExpiresAt
       ? String(account.subscriptionExpiresAt)
       : null,
     requestedPlan: account.requestedPlan,
     requestedAt: account.requestedAt ? String(account.requestedAt) : null,
-    subscriptionActive: account.subscriptionActive,
+    subscriptionActive: paidAccessAt(account.subscriptionActive, account.subscriptionExpiresAt ? String(account.subscriptionExpiresAt) : null),
     profileComplete: account.profileComplete,
   };
 }
@@ -85,6 +88,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     },
   });
   const updateAccount = useUpdateAccount();
+
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", state => {
+      if (state === "active" && isSignedIn) void accountQuery.refetch();
+    });
+    return () => listener.remove();
+  }, [isSignedIn, accountQuery.refetch]);
+
+  useEffect(() => {
+    if (!profile?.subscriptionActive || !profile.subscriptionExpiresAt) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const expiry = Date.parse(profile.subscriptionExpiresAt);
+    const check = () => {
+      const remaining = expiry - Date.now();
+      if (remaining > 0) {
+        timer = setTimeout(check, Math.min(remaining, 2_147_483_647));
+      } else {
+        setProfile(current => current ? { ...current, subscriptionActive: false, subscriptionStatus: "expired" } : current);
+        void accountQuery.refetch();
+      }
+    };
+    check();
+    return () => clearTimeout(timer);
+  }, [profile?.subscriptionActive, profile?.subscriptionExpiresAt, accountQuery.refetch]);
 
   useEffect(() => {
     if (!isLoaded) return;

@@ -230,8 +230,9 @@ paths:
   /subscription-request:
     post:
       operationId: requestSubscription
+      deprecated: true
       tags: [bloom]
-      summary: Tell the administrator a plan fee has been paid outside Bloom
+      summary: Retired manual payment request
       security:
         - bearerAuth: []
       requestBody:
@@ -241,12 +242,8 @@ paths:
             schema:
               $ref: "#/components/schemas/SubscriptionRequestInput"
       responses:
-        "200":
-          description: Payment verification request recorded
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SubscriptionRequest"
+        "503":
+          description: Manual requests are retired; verified subscription billing must be connected
   /advisors:
     get:
       operationId: listAdvisors
@@ -388,8 +385,9 @@ paths:
   /admin/members/{userId}/subscription:
     post:
       operationId: grantMembership
+      deprecated: true
       tags: [bloom]
-      summary: Manually activate a paid plan after external payment verification
+      summary: Retired administrator subscription activation
       security:
         - bearerAuth: []
       parameters:
@@ -405,16 +403,10 @@ paths:
             schema:
               $ref: "#/components/schemas/MembershipGrantInput"
       responses:
-        "200":
-          description: Membership activated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminMember"
+        "409":
+          description: Paid access requires verified billing, not administrator approval
         "403":
           description: Administrator access required
-        "404":
-          description: Member account not found
   /community/posts:
     get:
       operationId: listCommunityPosts

@@ -287,16 +287,14 @@ export const ListPlansResponse = zod.array(ListPlansResponseItem)
 
 
 /**
- * @summary Tell the administrator a plan fee has been paid outside Bloom
+ * @deprecated
+ * @summary Retired manual payment request
  */
 export const RequestSubscriptionBody = zod.object({
   "plan": zod.enum(['cycle', 'pregnancy'])
 })
 
-export const RequestSubscriptionResponse = zod.object({
-  "requestedPlan": zod.enum(['cycle', 'pregnancy']),
-  "requestedAt": zod.coerce.date()
-})
+export const RequestSubscriptionResponse = zod.void()
 
 
 /**
@@ -468,7 +466,8 @@ export const CreateAdviceResponse = zod.object({
 
 
 /**
- * @summary Manually activate a paid plan after external payment verification
+ * @deprecated
+ * @summary Retired administrator subscription activation
  */
 export const GrantMembershipParams = zod.object({
   "userId": zod.coerce.string()
@@ -484,18 +483,7 @@ export const GrantMembershipBody = zod.object({
   "confirmedPayment": zod.boolean()
 })
 
-export const GrantMembershipResponse = zod.object({
-  "userId": zod.string(),
-  "email": zod.string(),
-  "username": zod.string().nullable(),
-  "name": zod.string().nullable(),
-  "mode": zod.enum(['cycle', 'pregnant', 'none']),
-  "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
-  "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
-  "subscriptionExpiresAt": zod.coerce.date().nullable(),
-  "requestedPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
-  "requestedAt": zod.coerce.date().nullable()
-})
+export const GrantMembershipResponse = zod.void()
 
 
 export const ListCommunityPostsResponseItem = zod.object({
