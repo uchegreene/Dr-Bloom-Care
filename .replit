@@ -26,3 +26,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 ADMIN_EMAILS = "drbloomcare.app@gmail.com"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-6d48be61-8980-486b-b5bd-31aee6e8e054"
