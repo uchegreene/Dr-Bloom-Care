@@ -276,6 +276,57 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdvicePost"
+  /admin/assignments:
+    get:
+      operationId: listAdminAssignments
+      tags: [bloom]
+      summary: Super administrator lists delegated administrator access
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Administrator assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminAssignment"
+        "403":
+          description: Super administrator required
+  /admin/assignments/{userId}:
+    put:
+      operationId: setAdminAssignment
+      tags: [bloom]
+      summary: Super administrator grants or revokes administrator access
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminAssignmentInput"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAssignment"
+        "403":
+          description: Super administrator required
+        "404":
+          description: Registered member not found
+        "409":
+          description: Unverified target or protected super administrator
   /admin/members:
     get:
       operationId: listAdminMembers
@@ -603,6 +654,23 @@ components:
       type: http
       scheme: bearer
   schemas:
+    AdminAssignmentInput:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
+    AdminAssignment:
+      type: object
+      required: [userId, email, active, assignedBy, assignedAt, updatedBy, updatedAt]
+      properties:
+        userId: { type: string }
+        email: { type: string }
+        active: { type: boolean }
+        assignedBy: { type: string }
+        assignedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
     DailyTipDeviceInput:
       type: object
       required: [deviceId, enabled]
@@ -683,6 +751,7 @@ components:
         femaleOnlyConfirmed: { type: boolean }
         mode: { type: string, enum: [cycle, pregnant, none] }
         role: { type: string, enum: [member, admin, medical_team] }
+        isSuperAdmin: { type: boolean }
         advisorId: { type: ["integer", "null"] }
         subscriptionPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
         subscriptionStatus: { type: string, enum: [free, active, expired] }

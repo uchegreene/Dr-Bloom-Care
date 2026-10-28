@@ -1,5 +1,5 @@
 import { clerkClient, getAuth } from "@clerk/express";
-import { bloomAccountsTable, bloomAdvisorsTable, medicalTeamTable, db } from "@workspace/db";
+import { adminAssignmentsTable, bloomAccountsTable, bloomAdvisorsTable, medicalTeamTable, db } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import type { NextFunction, Request, Response } from "express";
 
@@ -8,9 +8,16 @@ export interface BloomRequest extends Request {
   bloomEmail?: string;
 }
 
-export function isBloomAdmin(email: string) {
-  return (process.env.ADMIN_EMAILS ?? "").split(",")
-    .map(value => value.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+export function isBloomSuperAdmin(email: string) {
+  const owner = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  return Boolean(owner && email.trim().toLowerCase() === owner);
+}
+
+export async function isBloomAdmin(userId: string, email: string) {
+  if (isBloomSuperAdmin(email)) return true;
+  const [assignment] = await db.select({ active: adminAssignmentsTable.active })
+    .from(adminAssignmentsTable).where(eq(adminAssignmentsTable.userId, userId)).limit(1);
+  return assignment?.active === true;
 }
 
 export async function medicalAccessFor(userId: string, email: string) {
@@ -19,7 +26,7 @@ export async function medicalAccessFor(userId: string, email: string) {
     .innerJoin(bloomAdvisorsTable, eq(medicalTeamTable.advisorId, bloomAdvisorsTable.id))
     .where(and(eq(medicalTeamTable.userId, userId), eq(bloomAdvisorsTable.isActive, true), eq(bloomAdvisorsTable.isVerified, true)))
     .limit(1);
-  return { isAdmin: isBloomAdmin(email), advisorId: assignment?.advisorId ?? null };
+  return { isAdmin: await isBloomAdmin(userId, email), isSuperAdmin: isBloomSuperAdmin(email), advisorId: assignment?.advisorId ?? null };
 }
 
 export async function hasActiveMembership(userId: string) {
@@ -94,17 +101,25 @@ export async function requireBloomAdmin(
   next: NextFunction,
 ) {
   await requireBloomProfile(req, res, async () => {
-    const email = (req as BloomRequest).bloomEmail;
-    const admins = (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
+    try {
+      const { bloomUserId, bloomEmail } = req as BloomRequest;
+      if (!await isBloomAdmin(bloomUserId!, bloomEmail!)) {
+        res.status(403).json({ error: "Administrator access required." });
+        return;
+      }
+      next();
+    } catch {
+      res.status(503).json({ error: "Administrator access could not be verified. Try again." });
+    }
+  });
+}
 
-    if (!email || admins.length === 0 || !admins.includes(email)) {
-      res.status(403).json({ error: "Administrator access is not configured." });
+export async function requireBloomSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  await requireBloomProfile(req, res, () => {
+    if (!isBloomSuperAdmin((req as BloomRequest).bloomEmail!)) {
+      res.status(403).json({ error: "Only the super administrator can manage administrator assignments." });
       return;
     }
-
     next();
   });
 }

@@ -21,6 +21,8 @@ import type {
 
 import type {
   AccountInput,
+  AdminAssignment,
+  AdminAssignmentInput,
   AdminMember,
   AdviceInput,
   AdvicePost,
@@ -1414,6 +1416,154 @@ export function useListAdvice<TData = Awaited<ReturnType<typeof listAdvice>>, TE
 
 
 
+
+export const getListAdminAssignmentsUrl = () => {
+
+
+
+
+  return `/api/admin/assignments`
+}
+
+/**
+ * @summary Super administrator lists delegated administrator access
+ */
+export const listAdminAssignments = async ( options?: RequestInit): Promise<AdminAssignment[]> => {
+
+  return customFetch<AdminAssignment[]>(getListAdminAssignmentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAssignmentsQueryKey = () => {
+    return [
+    `/api/admin/assignments`
+    ] as const;
+    }
+
+
+export const getListAdminAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAssignments>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAssignmentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAssignments>>> = ({ signal }) => listAdminAssignments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAssignments>>>
+export type ListAdminAssignmentsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Super administrator lists delegated administrator access
+ */
+
+export function useListAdminAssignments<TData = Awaited<ReturnType<typeof listAdminAssignments>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAssignmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetAdminAssignmentUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/assignments/${userId}`
+}
+
+/**
+ * @summary Super administrator grants or revokes administrator access
+ */
+export const setAdminAssignment = async (userId: string,
+    adminAssignmentInput: AdminAssignmentInput, options?: RequestInit): Promise<AdminAssignment> => {
+
+  return customFetch<AdminAssignment>(getSetAdminAssignmentUrl(userId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminAssignmentInput)
+  }
+);}
+
+
+
+
+export const getSetAdminAssignmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminAssignment>>, TError,{userId: string;data: BodyType<AdminAssignmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setAdminAssignment>>, TError,{userId: string;data: BodyType<AdminAssignmentInput>}, TContext> => {
+
+const mutationKey = ['setAdminAssignment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setAdminAssignment>>, {userId: string;data: BodyType<AdminAssignmentInput>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  setAdminAssignment(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetAdminAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof setAdminAssignment>>>
+    export type SetAdminAssignmentMutationBody = BodyType<AdminAssignmentInput>
+    export type SetAdminAssignmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Super administrator grants or revokes administrator access
+ */
+export const useSetAdminAssignment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminAssignment>>, TError,{userId: string;data: BodyType<AdminAssignmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setAdminAssignment>>,
+        TError,
+        {userId: string;data: BodyType<AdminAssignmentInput>},
+        TContext
+      > => {
+      return useMutation(getSetAdminAssignmentMutationOptions(options));
+    }
 
 export const getListAdminMembersUrl = () => {
 

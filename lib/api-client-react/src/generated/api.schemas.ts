@@ -5,6 +5,20 @@
  * Bloom account, plan, and care-advice API
  * OpenAPI spec version: 0.1.0
  */
+export interface AdminAssignmentInput {
+  active: boolean;
+}
+
+export interface AdminAssignment {
+  userId: string;
+  email: string;
+  active: boolean;
+  assignedBy: string;
+  assignedAt: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
 export interface DailyTipDeviceInput {
   /**
      * @minLength 1
@@ -178,6 +192,7 @@ export interface MemberAccount {
   femaleOnlyConfirmed: boolean;
   mode: MemberAccountMode;
   role: MemberAccountRole;
+  isSuperAdmin?: boolean;
   /** @nullable */
   advisorId: number | null;
   /** @nullable */

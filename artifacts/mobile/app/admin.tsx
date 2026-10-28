@@ -25,6 +25,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useConfirmation } from "@/hooks/useConfirmation";
 import { useProfile } from "@/hooks/useProfileContext";
+import { AdminAccessManager } from "@/components/AdminAccessManager";
 
 const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
 const CATEGORIES = [
@@ -113,6 +114,13 @@ export default function AdminScreen() {
   }, [plansQuery.data]);
 
   if (profile?.role !== "admin") return <Redirect href="/" />;
+  if (!profile.profileComplete) return (
+    <View style={{ flex: 1, justifyContent: "center", padding: 28, gap: 18, backgroundColor: colors.background }}>
+      <Text style={{ color: colors.foreground, fontFamily: "Nunito_700Bold", fontSize: 20 }}>Complete your administrator account</Text>
+      <Text style={{ color: colors.mutedForeground }}>Your verified identity is authorized. Complete your account details before using administrative tools.</Text>
+      <TouchableOpacity onPress={() => router.replace("/onboarding")}><Text style={{ color: colors.primary }}>Complete account setup</Text></TouchableOpacity>
+    </View>
+  );
 
   const savePrice = async (plan: "cycle" | "pregnancy", value: string) => {
     const priceNaira = Number(value);
@@ -220,7 +228,7 @@ export default function AdminScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Feather name="arrow-left" size={20} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.foreground }]}>Admin tools</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>{profile.isSuperAdmin ? "Super admin tools" : "Admin tools"}</Text>
       </View>
       <Text style={[styles.caption, { color: colors.mutedForeground }]}>
         Fees, member subscription status, and professional advice publishing. Paid subscriptions do not require admin approval.
@@ -235,6 +243,7 @@ export default function AdminScreen() {
         </Text>
       ) : null}
 
+      {profile.isSuperAdmin ? <AdminAccessManager members={membersQuery.data ?? []} currentUserId={profile.userId} /> : null}
       <Section title="Monthly plan fees">
         <Field label="Cycle plan (₦)" value={cyclePrice} onChangeText={setCyclePrice} keyboardType="number-pad" />
         <TouchableOpacity

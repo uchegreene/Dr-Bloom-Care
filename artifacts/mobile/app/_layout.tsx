@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DailyTipNotificationBridge } from "@/components/DailyTipNotificationBridge";
+import { AdminPortalGate } from "@/components/AdminPortalGate";
 
 // Mock contexts (we will implement them next)
 import { AppProviders } from "@/components/Providers";
@@ -68,7 +69,7 @@ function AuthenticatedApp() {
   return (
     <AppProviders key={isSignedIn ? userId ?? "signed-in" : "signed-out"}>
       <DailyTipNotificationBridge />
-      <RootLayoutNav />
+      <AdminPortalGate><RootLayoutNav /></AdminPortalGate>
     </AppProviders>
   );
 }

@@ -15,6 +15,7 @@ const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
+const ADMIN_WEB_ROOT = path.resolve(__dirname, "..", "admin-web-build");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
 const MIME_TYPES = {
@@ -110,6 +111,26 @@ const appName = getAppName();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
   let pathname = url.pathname;
+  const hostname = String(req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim().split(":")[0].toLowerCase().replace(/\.$/, "");
+  if (hostname === "admin.drbloomcare.com") {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    res.setHeader("Cache-Control", "no-store");
+    let decoded;
+    try { decoded = decodeURIComponent(pathname); } catch { res.writeHead(400); return res.end("Invalid path"); }
+    const candidate = path.resolve(ADMIN_WEB_ROOT, "." + decoded);
+    if (!candidate.startsWith(ADMIN_WEB_ROOT + path.sep) && candidate !== ADMIN_WEB_ROOT) {
+      res.writeHead(403); return res.end("Forbidden");
+    }
+    const staticFile = fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
+    const file = staticFile || (path.extname(decoded) ? null : path.join(ADMIN_WEB_ROOT, "index.html"));
+    if (!file) { res.writeHead(404); return res.end("Not Found"); }
+    if (!fs.existsSync(file)) {
+      res.writeHead(503, { "content-type": "text/plain" });
+      return res.end("The admin portal web build is unavailable. Publish a successful build before using this domain.");
+    }
+    res.writeHead(200, { "content-type": MIME_TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
+    return res.end(fs.readFileSync(file));
+  }
 
   if (basePath && pathname.startsWith(basePath)) {
     pathname = pathname.slice(basePath.length) || "/";

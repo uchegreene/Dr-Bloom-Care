@@ -24,6 +24,7 @@ export interface MemberAccount {
   femaleOnlyConfirmed: boolean;
   mode: MemberAccountMode;
   role: MemberAccountRole;
+  isSuperAdmin?: boolean;
   /** @nullable */
   advisorId: number | null;
   /** @nullable */

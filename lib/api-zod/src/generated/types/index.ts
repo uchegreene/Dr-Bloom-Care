@@ -8,6 +8,8 @@
 
 export * from './accountInput';
 export * from './accountInputMode';
+export * from './adminAssignment';
+export * from './adminAssignmentInput';
 export * from './adminMember';
 export * from './adminMemberMode';
 export * from './adminMemberRequestedPlan';

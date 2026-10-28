@@ -29,6 +29,7 @@ export interface Profile {
   femaleOnlyConfirmed: boolean;
   mode: ProfileMode;
   role: "member" | "admin" | "medical_team";
+  isSuperAdmin: boolean;
   advisorId: number | null;
   subscriptionPlan: SubscriptionPlan | null;
   subscriptionStatus: "free" | "active" | "expired";
@@ -61,6 +62,7 @@ function mapAccount(account: MemberAccount): Profile {
     femaleOnlyConfirmed: account.femaleOnlyConfirmed,
     mode: account.mode,
     role: account.role,
+    isSuperAdmin: account.isSuperAdmin === true,
     advisorId: account.advisorId,
     subscriptionPlan: account.subscriptionPlan,
     subscriptionStatus: account.subscriptionStatus === "active" && !paidAccessAt(true, account.subscriptionExpiresAt ? String(account.subscriptionExpiresAt) : null)

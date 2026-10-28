@@ -217,6 +217,7 @@ export const GetAccountResponse = zod.object({
   "femaleOnlyConfirmed": zod.boolean(),
   "mode": zod.enum(['cycle', 'pregnant', 'none']),
   "role": zod.enum(['member', 'admin', 'medical_team']),
+  "isSuperAdmin": zod.boolean().optional(),
   "advisorId": zod.number().nullable(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
@@ -261,6 +262,7 @@ export const UpdateAccountResponse = zod.object({
   "femaleOnlyConfirmed": zod.boolean(),
   "mode": zod.enum(['cycle', 'pregnant', 'none']),
   "role": zod.enum(['member', 'admin', 'medical_team']),
+  "isSuperAdmin": zod.boolean().optional(),
   "advisorId": zod.number().nullable(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
@@ -329,6 +331,47 @@ export const ListAdviceResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListAdviceResponse = zod.array(ListAdviceResponseItem)
+
+
+/**
+ * @summary Super administrator lists delegated administrator access
+ */
+export const ListAdminAssignmentsResponseItem = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "active": zod.boolean(),
+  "assignedBy": zod.string(),
+  "assignedAt": zod.coerce.date(),
+  "updatedBy": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAdminAssignmentsResponse = zod.array(ListAdminAssignmentsResponseItem)
+
+
+/**
+ * @summary Super administrator grants or revokes administrator access
+ */
+export const setAdminAssignmentPathUserIdMax = 128;
+
+
+
+export const SetAdminAssignmentParams = zod.object({
+  "userId": zod.coerce.string().max(setAdminAssignmentPathUserIdMax)
+})
+
+export const SetAdminAssignmentBody = zod.object({
+  "active": zod.boolean()
+})
+
+export const SetAdminAssignmentResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "active": zod.boolean(),
+  "assignedBy": zod.string(),
+  "assignedAt": zod.coerce.date(),
+  "updatedBy": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
 
 
 /**

@@ -9,11 +9,11 @@ Free registration uses email/password with a public username. Free members may r
 
 **How to apply:** Keep mode switching available in Profile for every member. Treat entitlement changes as separate authorized actions.
 
-Administrator identities must be explicitly authorized by the owner, never through a self-selected account role. Professional blue badges require the administrator to check identity and credentials.
+Administrator identities must be explicitly authorized by the owner, never through a self-selected account role. Only the designated super administrator may assign or remove other general administrators; delegated administrators cannot promote anyone. Professional blue badges and medical-team assignments remain separate from general administrative authority.
 
-**Why:** The user explicitly designated the super-administrator identity and requested verified care professionals, not unrestricted self-verification.
+**Why:** The owner explicitly requested exclusive super-admin control of all other admin assignments and verified care professionals, not unrestricted self-verification. The identity is configured privately, not recorded in project memory.
 
-**How to apply:** Never auto-promote the first account or manufacture a verified professional. Keep initial admin tools locked until the intended identity is provided.
+**How to apply:** Verify the designated account's primary email on the server. Never auto-promote the first account, infer admin authority from a paid subscription, or manufacture a verified professional. Keep all assignment operations super-admin-only.
 
 Paid subscriptions must activate automatically after provider-verified payment, without administrator approval, and access ends when the paid period expires. Do not grant access merely because someone selected a plan or clicked a payment confirmation.
 

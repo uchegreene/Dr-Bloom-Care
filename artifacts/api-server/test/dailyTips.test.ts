@@ -8,6 +8,7 @@ import {
   dailyTipsTable as tips, dailyTipNoticesTable as notices, dailyTipDevicesTable as devices,
 } from "@workspace/db";
 import dailyTipRouter from "../src/routes/dailyTips";
+import bloomRouter from "../src/routes/bloom";
 import { runDailyTipJob, runDailyDraftJob, publishApprovedTips } from "../src/jobs/dailyTips";
 import { dispatchTipPush } from "../src/jobs/dailyTipPush";
 import { nigeriaDate, publicationTime, eligibleTipPlan, tipDateOffset } from "../src/lib/dailyTipRules";
@@ -28,16 +29,17 @@ test("Nigeria 9am boundaries, calendar rollover and exact paid entitlement", () 
 test("isolated DB: auth, premium access, review, scheduling, notifications and privacy", async () => {
   const schema = process.env.TIP_TEST_SCHEMA!;
   assert.match(schema, /^tip_test_[a-f0-9]+$/);
-  const tables = ["bloom_accounts", "bloom_advisors", "bloom_medical_team", "daily_tip_settings",
+  const tables = ["bloom_accounts", "bloom_admin_assignments", "bloom_advisors", "bloom_medical_team", "daily_tip_settings",
     "daily_tips", "daily_tip_notices", "daily_tip_devices", "daily_tip_push"];
   const suffix = schema.slice(-12);
   const user = (role: string) => `TEST_tip_${role}_${suffix}`;
   const roles = ["cycle", "pregnancy", "free", "expired", "staff", "admin", "unverified", "unconfirmed"];
   const ids = roles.map(user);
-  process.env.ADMIN_EMAILS = `${user("admin").toLowerCase()}@example.com`;
+  process.env.SUPER_ADMIN_EMAIL = `${user("admin").toLowerCase()}@example.com`;
   const app = express();
   app.use(express.json());
   app.use(dailyTipRouter);
+  app.use(bloomRouter);
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
@@ -50,6 +52,13 @@ test("isolated DB: auth, premium access, review, scheduling, notifications and p
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     return { status: response.status, data: response.status === 204 ? null : await response.json() as any };
+  };
+  const adminApi = async (method: string, path: string, role?: string, body?: unknown) => {
+    const response = await realFetch(`${origin}${path}`, {
+      method, headers: { "Content-Type": "application/json", ...(role ? { "x-fixture-user": user(role) } : {}) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    return { status: response.status, data: await response.json() as any };
   };
   try {
     await pool.query(`CREATE SCHEMA "${schema}"`);
@@ -70,6 +79,24 @@ test("isolated DB: auth, premium access, review, scheduling, notifications and p
     const [cycle, pregnancy] = await db.insert(tips).values(["cycle", "pregnancy"].map(audience => ({
       date: "2050-02-11", audience, status: "draft", title: `TEST ${audience} education`, body: "TEST general education only.",
     }))).returning();
+    assert.equal((await adminApi("GET", "/admin/assignments")).status, 401);
+    assert.equal((await adminApi("GET", "/admin/assignments", "free")).status, 403);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("free")}`, "free", { active: true })).status, 403);
+    assert.equal((await adminApi("GET", "/account", "admin")).data.isSuperAdmin, true);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("admin")}`, "admin", { active: false })).status, 409);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("unverified")}`, "admin", { active: true })).status, 409);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("cycle")}`, "admin", { active: true })).status, 200);
+    const delegated = (await adminApi("GET", "/account", "cycle")).data;
+    assert.equal(delegated.role, "admin");
+    assert.equal(delegated.isSuperAdmin, false);
+    assert.equal((await adminApi("GET", "/admin/members", "cycle")).status, 200);
+    assert.equal((await adminApi("GET", "/admin/assignments", "cycle")).status, 403);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("free")}`, "cycle", { active: true })).status, 403);
+    assert.equal((await adminApi("PUT", `/admin/assignments/${user("cycle")}`, "admin", { active: false })).status, 200);
+    assert.equal((await adminApi("GET", "/admin/members", "cycle")).status, 403);
+    assert.equal((await adminApi("GET", "/account", "cycle")).data.role, "member");
+    assert.equal((await adminApi("GET", "/account", "cycle")).data.subscriptionActive, true);
+
     assert.equal((await api("GET", "")).status, 401);
     assert.equal((await api("GET", "", "unverified")).status, 403);
     assert.equal((await api("GET", "", "unconfirmed")).status, 403);

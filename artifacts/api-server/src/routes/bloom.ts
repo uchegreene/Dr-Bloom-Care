@@ -4,12 +4,14 @@ import {
   bloomAdvisorsTable,
   bloomPlansTable,
   db,
+  adminAssignmentsTable,
 } from "@workspace/db";
 import {
   CreateAdviceBody,
   CreateAdvisorBody,
   UpdateAccountBody,
   UpdatePlanPriceBody,
+  SetAdminAssignmentBody,
 } from "@workspace/api-zod";
 import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -17,9 +19,12 @@ import {
   requireBloomAdmin,
   requireBloomMember,
   requireBloomProfile,
+  requireBloomSuperAdmin,
+  isBloomSuperAdmin,
   medicalAccessFor,
   type BloomRequest,
 } from "../middlewares/bloomAuth";
+import { clerkClient } from "@clerk/express";
 
 const router: IRouter = Router();
 const defaultPlans = [
@@ -61,7 +66,7 @@ async function ensureAccount(userId: string, email: string) {
   return created;
 }
 
-function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean, advisorId: number | null = null) {
+function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean, advisorId: number | null = null, isSuperAdmin = false) {
   const subscriptionStatus = statusFor(
     account.subscriptionStatus,
     account.subscriptionExpiresAt,
@@ -76,6 +81,7 @@ function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmi
     femaleOnlyConfirmed: account.femaleOnlyConfirmed,
     mode: account.mode as "cycle" | "pregnant" | "none",
     role: isAdmin ? "admin" : advisorId ? "medical_team" : "member",
+    isSuperAdmin,
     advisorId,
     subscriptionPlan: account.subscriptionPlan as "cycle" | "pregnancy" | null,
     subscriptionStatus,
@@ -97,14 +103,11 @@ async function ensurePlans() {
 }
 
 router.get("/account", requireBloomMember, async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
   const { bloomUserId, bloomEmail } = req as BloomRequest;
   const account = await ensureAccount(bloomUserId!, bloomEmail!);
-  const admins = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
   const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
-  res.json(accountResponse(account, admins.includes(bloomEmail!), access.advisorId));
+  res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin));
 });
 
 router.put("/account", requireBloomMember, async (req, res) => {
@@ -153,12 +156,8 @@ router.put("/account", requireBloomMember, async (req, res) => {
         },
       })
       .returning();
-    const admins = (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean);
     const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
-    res.json(accountResponse(account, admins.includes(bloomEmail!), access.advisorId));
+    res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin));
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
       res.status(409).json({ error: "That username is already in use." });
@@ -167,6 +166,54 @@ router.put("/account", requireBloomMember, async (req, res) => {
     req.log?.error({ err: error }, "Unable to save Bloom profile");
     res.status(500).json({ error: "Unable to save your profile right now." });
   }
+});
+
+router.get("/admin/assignments", requireBloomSuperAdmin, async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await db.select().from(adminAssignmentsTable).orderBy(desc(adminAssignmentsTable.updatedAt)));
+});
+
+router.put("/admin/assignments/:userId", requireBloomSuperAdmin, async (req, res) => {
+  const parsed = SetAdminAssignmentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Choose whether administrator access should be enabled." });
+    return;
+  }
+  const userId = String(req.params.userId);
+  const [member] = await db.select().from(bloomAccountsTable)
+    .where(eq(bloomAccountsTable.clerkUserId, userId)).limit(1);
+  if (!member) {
+    res.status(404).json({ error: "The person must register an account first." });
+    return;
+  }
+  let email = member.email;
+  // Revocations must not depend on the target still having a valid Clerk account.
+  if (parsed.data.active) {
+    try {
+      const user = await clerkClient.users.getUser(userId);
+      const primary = user.emailAddresses.find(address => address.id === user.primaryEmailAddressId);
+      if (primary?.verification?.status !== "verified") {
+        res.status(409).json({ error: "The account must verify its primary email before receiving administrator access." });
+        return;
+      }
+      email = primary.emailAddress.toLowerCase();
+    } catch {
+      res.status(503).json({ error: "The target account could not be verified. No access was changed." });
+      return;
+    }
+  }
+  if ((parsed.data.active && isBloomSuperAdmin(email)) || userId === (req as BloomRequest).bloomUserId) {
+    res.status(409).json({ error: "The designated super administrator cannot be changed through administrator assignments." });
+    return;
+  }
+  const actor = (req as BloomRequest).bloomUserId!;
+  const [assignment] = await db.insert(adminAssignmentsTable).values({
+    userId, email, active: parsed.data.active, assignedBy: actor, updatedBy: actor,
+  }).onConflictDoUpdate({
+    target: adminAssignmentsTable.userId,
+    set: { email, active: parsed.data.active, updatedBy: actor, updatedAt: new Date() },
+  }).returning();
+  res.json(assignment);
 });
 
 router.get("/plans", requireBloomMember, async (_req, res) => {
