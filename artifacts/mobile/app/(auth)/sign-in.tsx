@@ -11,6 +11,7 @@ import {
 import { useAuth, useSignIn } from "@clerk/expo";
 import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
+import { PasswordRecovery } from "@/components/PasswordRecovery";
 
 export default function SignInScreen() {
   const colors = useColors();
@@ -20,6 +21,7 @@ export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [recovering, setRecovering] = useState(false);
   const busy = fetchStatus === "fetching";
 
   const submit = async () => {
@@ -50,6 +52,11 @@ export default function SignInScreen() {
   };
 
   if (isSignedIn) return <Redirect href="/" />;
+  if (recovering) return <PasswordRecovery initialEmail={email} onBack={() => {
+    setPassword("");
+    setMessage("");
+    setRecovering(false);
+  }} />;
 
   return (
     <ScrollView
@@ -89,6 +96,10 @@ export default function SignInScreen() {
       />
 
       {message ? <Text style={styles.error}>{message}</Text> : null}
+      <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => setRecovering(true)}
+        style={{ paddingVertical: 14, alignSelf: "flex-end" }}>
+        <Text style={{ color: colors.primary, fontWeight: "700" }}>Forgot password?</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={submit}
         disabled={!email.trim() || !password || busy}
