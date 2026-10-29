@@ -14,6 +14,7 @@ import { useAuth, useSignUp } from "@clerk/expo";
 import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { isAdminPortalHost } from "@/lib/adminPortal";
+import { AppStoreDownloads } from "@/components/AppStoreDownloads";
 
 export default function SignUpScreen() {
   const colors = useColors();
@@ -154,6 +155,7 @@ export default function SignUpScreen() {
           Sign in
         </Link>
       </Text>
+      {!codeSent ? <AppStoreDownloads /> : null}
     </ScrollView>
   );
 }

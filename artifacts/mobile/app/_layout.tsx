@@ -13,6 +13,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DailyTipNotificationBridge } from "@/components/DailyTipNotificationBridge";
@@ -23,6 +24,11 @@ import { AppProviders } from "@/components/Providers";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const configuredProxy = process.env.EXPO_PUBLIC_CLERK_PROXY_URL;
+// The same export serves both domains; browser auth must stay on its own origin.
+const clerkProxyUrl = Platform.OS === "web" && typeof window !== "undefined" && configuredProxy?.startsWith("/")
+  ? new URL(configuredProxy, window.location.origin).href
+  : configuredProxy;
 const tokenCache = {
   async getToken(key: string) {
     return SecureStore.getItemAsync(key);
@@ -98,7 +104,7 @@ export default function RootLayout() {
               <ClerkProvider
                 publishableKey={publishableKey}
                 tokenCache={tokenCache}
-                proxyUrl={process.env.EXPO_PUBLIC_CLERK_PROXY_URL}
+                proxyUrl={clerkProxyUrl}
               >
                 <ClerkLoaded>
                   <AuthenticatedApp />

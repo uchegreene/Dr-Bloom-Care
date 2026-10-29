@@ -1,10 +1,10 @@
 /**
  * Standalone production server for Expo static builds.
  *
- * Serves the output of build.js (static-build/) with two special routes:
+ * Browser requests open the exported web app on both member and admin domains.
+ * Preserve native Expo manifest requests for development/native clients:
  * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
- * Everything else falls through to static file serving from ./static-build/.
+ * Web assets come from admin-web-build/; native assets from static-build/.
  *
  * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
  */
@@ -14,7 +14,6 @@ const fs = require("fs");
 const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
-const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const ADMIN_WEB_ROOT = path.resolve(__dirname, "..", "admin-web-build");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
@@ -41,16 +40,6 @@ const MIME_TYPES = {
   ".map": "application/json",
 };
 
-function getAppName() {
-  try {
-    const appJsonPath = path.resolve(__dirname, "..", "app.json");
-    const appJson = JSON.parse(fs.readFileSync(appJsonPath, "utf-8"));
-    return appJson.expo?.name || "App Landing Page";
-  } catch {
-    return "App Landing Page";
-  }
-}
-
 function serveManifest(platform, res) {
   const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
 
@@ -69,22 +58,6 @@ function serveManifest(platform, res) {
     "expo-sfv-version": "0",
   });
   res.end(manifest);
-}
-
-function serveLandingPage(req, res, landingPageTemplate, appName) {
-  const forwardedProto = req.headers["x-forwarded-proto"];
-  const protocol = forwardedProto || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers["host"];
-  const baseUrl = `${protocol}://${host}`;
-  const expsUrl = `${host}`;
-
-  const html = landingPageTemplate
-    .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
-    .replace(/EXPS_URL_PLACEHOLDER/g, expsUrl)
-    .replace(/APP_NAME_PLACEHOLDER/g, appName);
-
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(html);
 }
 
 function serveStaticFile(urlPath, res) {
@@ -110,8 +83,21 @@ function serveStaticFile(urlPath, res) {
   res.end(content);
 }
 
-const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
-const appName = getAppName();
+function serveWebApp(pathname, res) {
+  let decoded;
+  try { decoded = decodeURIComponent(pathname); }
+  catch { res.writeHead(400); return res.end("Invalid path"); }
+  const candidate = path.resolve(ADMIN_WEB_ROOT, "." + decoded);
+  if (!candidate.startsWith(ADMIN_WEB_ROOT + path.sep) && candidate !== ADMIN_WEB_ROOT) {
+    res.writeHead(403); return res.end("Forbidden");
+  }
+  const staticFile = fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
+  const file = staticFile || (path.extname(decoded) ? null : path.join(ADMIN_WEB_ROOT, "index.html"));
+  if (!file) return serveStaticFile(decoded, res);
+  res.setHeader("Cache-Control", "no-store");
+  res.writeHead(200, { "content-type": MIME_TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
+  return res.end(fs.readFileSync(file));
+}
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -124,24 +110,10 @@ const server = http.createServer((req, res) => {
       res.writeHead(302, { Location: "/sign-in" });
       return res.end();
     }
-    let decoded;
-    try { decoded = decodeURIComponent(pathname); } catch { res.writeHead(400); return res.end("Invalid path"); }
-    const candidate = path.resolve(ADMIN_WEB_ROOT, "." + decoded);
-    if (!candidate.startsWith(ADMIN_WEB_ROOT + path.sep) && candidate !== ADMIN_WEB_ROOT) {
-      res.writeHead(403); return res.end("Forbidden");
-    }
-    const staticFile = fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
-    const file = staticFile || (path.extname(decoded) ? null : path.join(ADMIN_WEB_ROOT, "index.html"));
-    if (!file) { res.writeHead(404); return res.end("Not Found"); }
-    if (!fs.existsSync(file)) {
-      res.writeHead(503, { "content-type": "text/plain" });
-      return res.end("The admin portal web build is unavailable. Publish a successful build before using this domain.");
-    }
-    res.writeHead(200, { "content-type": MIME_TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
-    return res.end(fs.readFileSync(file));
+    return serveWebApp(pathname, res);
   }
 
-  if (basePath && pathname.startsWith(basePath)) {
+  if (basePath && (pathname === basePath || pathname.startsWith(basePath + "/"))) {
     pathname = pathname.slice(basePath.length) || "/";
   }
 
@@ -151,15 +123,16 @@ const server = http.createServer((req, res) => {
       return serveManifest(platform, res);
     }
 
-    if (pathname === "/") {
-      return serveLandingPage(req, res, landingPageTemplate, appName);
-    }
+    if (pathname === "/manifest") { res.writeHead(404); return res.end("Native platform required"); }
   }
 
-  serveStaticFile(pathname, res);
+  serveWebApp(pathname, res);
 });
 
 const port = parseInt(process.env.PORT || "3000", 10);
-server.listen(port, "0.0.0.0", () => {
-  console.log(`Serving static Expo build on port ${port}`);
-});
+if (require.main === module) {
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Serving Dr Bloom Care web app and native assets on port ${port}`);
+  });
+}
+module.exports = server;

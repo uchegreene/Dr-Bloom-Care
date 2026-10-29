@@ -1,4 +1,4 @@
-// Admin browsers need a web export; the existing native bundles/landing page stay unchanged.
+// One web export serves member and admin browsers; native bundles stay separate.
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -9,7 +9,7 @@ const result = spawnSync("pnpm", ["exec", "expo", "export", "--platform", "web",
     ...process.env,
     EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY,
     EXPO_PUBLIC_API_BASE_URL: "",
-    EXPO_PUBLIC_CLERK_PROXY_URL: "https://admin.drbloomcare.com/api/__clerk",
+    EXPO_PUBLIC_CLERK_PROXY_URL: "/api/__clerk",
   },
 });
 process.exitCode = result.status ?? 1;

@@ -8,6 +8,12 @@ Use admin.drbloomcare.com as a separate administrative browser entry point while
 
 **How to apply:** Restrict portal UI to authenticated administrators, and enforce every sensitive permission on the backend regardless of hostname. DNS or a hidden link is not an authorization mechanism. Do not claim the proposed address is live until publishing, domain linking and DNS verification are complete.
 
+The main member domain opens the browser web app directly, not an Expo Go download page. Mobile-store download choices belong on member signup.
+
+**Why:** The owner explicitly requested browser access at drbloomcare.com and separate App Store/Google Play download buttons.
+
+**How to apply:** Preserve native manifest requests without placing an Expo installation requirement in front of browser users. Only link to actual Dr Bloom Care store listings; missing links must be visibly unavailable, never replaced with Expo Go.
+
 The admin domain is sign-in only. Only the super admin may register staff/sub-admin accounts or grant and revoke staff assignments. Public member signup remains separate.
 
 **Why:** The owner explicitly rejected public signup on the admin link and required the super admin to sign up all staff and sub-admins.
