@@ -25,8 +25,10 @@ import {
   type BloomRequest,
 } from "../middlewares/bloomAuth";
 import { clerkClient } from "@clerk/express";
+import staffAccountsRouter from "./staffAccounts";
 
 const router: IRouter = Router();
+router.use(staffAccountsRouter);
 const defaultPlans = [
   { plan: "cycle", priceNaira: 4000 },
   { plan: "pregnancy", priceNaira: 7000 },

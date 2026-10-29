@@ -4,7 +4,7 @@ import { useSignIn } from "@clerk/expo";
 import { useColors } from "@/hooks/useColors";
 
 /** Passwords and verification codes go directly to Clerk, never our application server. */
-export function PasswordRecovery({ initialEmail, onBack }: { initialEmail: string; onBack: () => void }) {
+export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { initialEmail: string; onBack: () => void; adminOnly?: boolean }) {
   const colors = useColors();
   const { signIn } = useSignIn();
   const [step, setStep] = useState<"email" | "code" | "password" | "done">("email");
@@ -75,7 +75,7 @@ export function PasswordRecovery({ initialEmail, onBack }: { initialEmail: strin
       <TextInput accessibilityLabel="Account email" value={email} onChangeText={setEmail} editable={!busy}
         autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" style={fieldStyle} />
       <Text style={{ color: colors.mutedForeground, lineHeight: 21, marginTop: 14 }}>
-        If you have never created an account, register in the member app first and verify your email. A designated admin email alone does not create an account.
+        {adminOnly ? "Use the email assigned by the super admin. If an account has not been created for you, contact the super admin." : "If you have never created an account, register in the member app first and verify your email. A designated admin email alone does not create an account."}
       </Text>
     </> : step === "code" ? <>
       <Text style={labelStyle}>Verification code</Text>

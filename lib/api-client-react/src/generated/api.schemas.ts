@@ -5,6 +5,41 @@
  * Bloom account, plan, and care-advice API
  * OpenAPI spec version: 0.1.0
  */
+export type StaffAccountInputRole = typeof StaffAccountInputRole[keyof typeof StaffAccountInputRole];
+
+
+export const StaffAccountInputRole = {
+  admin: 'admin',
+  medical_team: 'medical_team',
+} as const;
+
+export interface StaffAccountInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  role: StaffAccountInputRole;
+  /** @minimum 1 */
+  advisorId?: number;
+}
+
+export type StaffAccountResultRole = typeof StaffAccountResultRole[keyof typeof StaffAccountResultRole];
+
+
+export const StaffAccountResultRole = {
+  admin: 'admin',
+  medical_team: 'medical_team',
+} as const;
+
+export interface StaffAccountResult {
+  userId: string;
+  email: string;
+  role: StaffAccountResultRole;
+}
+
 export interface AdminAssignmentInput {
   active: boolean;
 }

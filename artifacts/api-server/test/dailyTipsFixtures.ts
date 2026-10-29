@@ -1,8 +1,21 @@
 /** Test-bundle aliases only. These are never imported by the real API. */
 export const getAuth = (req: { header(name: string): string | undefined }) => ({ userId: req.header("x-fixture-user") ?? null });
-export const clerkClient = { users: { getUser: async (id: string) => ({
+const staffIdentities = new Map<string, string>();
+export const removedStaffIdentities: string[] = [];
+export const clerkClient = { users: {
+getUserList: async ({ emailAddress }: { emailAddress: string[] }) => ({
+  data: [...staffIdentities].filter(([, email]) => emailAddress.includes(email)).map(([id]) => ({ id })),
+}),
+createUser: async ({ emailAddress, password }: { emailAddress: string[]; password: string }) => {
+  if (password.length < 32) throw new Error("Expected a unique non-shared random credential");
+  const id = `TEST_created_staff_${staffIdentities.size + 1}`;
+  staffIdentities.set(id, emailAddress[0]);
+  return { id };
+},
+deleteUser: async (id: string) => { staffIdentities.delete(id); removedStaffIdentities.push(id); },
+getUser: async (id: string) => ({
   id, primaryEmailAddressId: "fixture-email",
-  emailAddresses: [{ id: "fixture-email", emailAddress: `${id.toLowerCase()}@example.com`,
+  emailAddresses: [{ id: "fixture-email", emailAddress: staffIdentities.get(id) ?? `${id.toLowerCase()}@example.com`,
     verification: { status: id.includes("_unverified_") ? "unverified" : "verified" } }],
 }) } };
 export const modelInputs: string[] = [];

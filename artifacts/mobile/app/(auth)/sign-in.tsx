@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import { useAuth, useSignIn } from "@clerk/expo";
 import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { PasswordRecovery } from "@/components/PasswordRecovery";
+import { isAdminPortalHost } from "@/lib/adminPortal";
 
 export default function SignInScreen() {
   const colors = useColors();
@@ -23,6 +25,7 @@ export default function SignInScreen() {
   const [message, setMessage] = useState("");
   const [recovering, setRecovering] = useState(false);
   const busy = fetchStatus === "fetching";
+  const adminPortal = Platform.OS === "web" && typeof window !== "undefined" && isAdminPortalHost(window.location.hostname);
 
   const submit = async () => {
     setMessage("");
@@ -52,7 +55,7 @@ export default function SignInScreen() {
   };
 
   if (isSignedIn) return <Redirect href="/" />;
-  if (recovering) return <PasswordRecovery initialEmail={email} onBack={() => {
+  if (recovering) return <PasswordRecovery initialEmail={email} adminOnly={adminPortal} onBack={() => {
     setPassword("");
     setMessage("");
     setRecovering(false);
@@ -67,9 +70,9 @@ export default function SignInScreen() {
       <Image source={require("../../assets/images/logo.png")} style={styles.mark}
         resizeMode="contain" accessible accessibilityLabel="Dr Bloom Care flower logo" />
       <Text style={[styles.brand, { color: colors.foreground }]}>Dr Bloom Care</Text>
-      <Text style={[styles.title, { color: colors.foreground }]}>Welcome back</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{adminPortal ? "Staff sign in" : "Welcome back"}</Text>
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-        Sign in with the email and password on your account.
+        {adminPortal ? "Staff accounts are created by the super admin. Sign in with your assigned email and private password." : "Sign in with the email and password on your account."}
       </Text>
 
       <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
@@ -110,12 +113,12 @@ export default function SignInScreen() {
           {busy ? "Signing in…" : "Sign in"}
         </Text>
       </TouchableOpacity>
-      <Text style={[styles.footer, { color: colors.mutedForeground }]}>
+      {!adminPortal ? <Text style={[styles.footer, { color: colors.mutedForeground }]}>
         New to Dr Bloom Care?{" "}
         <Link href={"/(auth)/sign-up" as Href} style={{ color: colors.primary, fontWeight: "700" }}>
           Create a free account
         </Link>
-      </Text>
+      </Text> : <Text style={[styles.footer, { color: colors.mutedForeground }]}>Need an account? Contact the super admin. To set your password for the first time, use “Forgot password?”.</Text>}
     </ScrollView>
   );
 }

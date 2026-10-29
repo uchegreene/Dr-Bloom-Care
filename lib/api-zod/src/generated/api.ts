@@ -334,6 +334,31 @@ export const ListAdviceResponse = zod.array(ListAdviceResponseItem)
 
 
 /**
+ * @summary Super administrator creates a staff account
+ */
+export const createStaffAccountBodyEmailMax = 254;
+
+export const createStaffAccountBodyNameMin = 2;
+export const createStaffAccountBodyNameMax = 120;
+
+
+
+
+export const CreateStaffAccountBody = zod.object({
+  "email": zod.string().email().max(createStaffAccountBodyEmailMax),
+  "name": zod.string().min(createStaffAccountBodyNameMin).max(createStaffAccountBodyNameMax),
+  "role": zod.enum(['admin', 'medical_team']),
+  "advisorId": zod.number().min(1).optional()
+})
+
+export const CreateStaffAccountResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['admin', 'medical_team'])
+})
+
+
+/**
  * @summary Super administrator lists delegated administrator access
  */
 export const ListAdminAssignmentsResponseItem = zod.object({

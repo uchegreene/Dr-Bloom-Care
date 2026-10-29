@@ -53,6 +53,8 @@ import type {
   MembershipGrantInput,
   PlanPriceInput,
   PlanPricing,
+  StaffAccountInput,
+  StaffAccountResult,
   SubscriptionRequestInput
 } from './api.schemas';
 
@@ -1416,6 +1418,76 @@ export function useListAdvice<TData = Awaited<ReturnType<typeof listAdvice>>, TE
 
 
 
+
+export const getCreateStaffAccountUrl = () => {
+
+
+
+
+  return `/api/admin/staff-accounts`
+}
+
+/**
+ * @summary Super administrator creates a staff account
+ */
+export const createStaffAccount = async (staffAccountInput: StaffAccountInput, options?: RequestInit): Promise<StaffAccountResult> => {
+
+  return customFetch<StaffAccountResult>(getCreateStaffAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(staffAccountInput)
+  }
+);}
+
+
+
+
+export const getCreateStaffAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStaffAccount>>, TError,{data: BodyType<StaffAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStaffAccount>>, TError,{data: BodyType<StaffAccountInput>}, TContext> => {
+
+const mutationKey = ['createStaffAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStaffAccount>>, {data: BodyType<StaffAccountInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStaffAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStaffAccountMutationResult = NonNullable<Awaited<ReturnType<typeof createStaffAccount>>>
+    export type CreateStaffAccountMutationBody = BodyType<StaffAccountInput>
+    export type CreateStaffAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Super administrator creates a staff account
+ */
+export const useCreateStaffAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStaffAccount>>, TError,{data: BodyType<StaffAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStaffAccount>>,
+        TError,
+        {data: BodyType<StaffAccountInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStaffAccountMutationOptions(options));
+    }
 
 export const getListAdminAssignmentsUrl = () => {
 

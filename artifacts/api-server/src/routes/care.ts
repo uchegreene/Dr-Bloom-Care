@@ -1,5 +1,5 @@
 import { Router, type IRouter, type ErrorRequestHandler } from "express";
-import { requireBloomProfile, requireBloomAdmin } from "../middlewares/bloomAuth";
+import { requireBloomProfile, requireBloomAdmin, requireBloomSuperAdmin } from "../middlewares/bloomAuth";
 import { MedicalError } from "../lib/medicalAccess";
 import communityRouter from "./community";
 import medicalRouter from "./medical";
@@ -22,7 +22,10 @@ for (const child of [communityRouter, medicalRouter]) {
 }
 router.use("/community", requireBloomProfile, communityRouter);
 router.use("/medical", requireBloomProfile, medicalRouter);
-router.use("/admin/medical-team", requireBloomAdmin, medicalTeamRouter);
+router.use("/admin/medical-team", (req, res, next) => {
+  if (req.method === "GET") return requireBloomAdmin(req, res, next);
+  return requireBloomSuperAdmin(req, res, next);
+}, medicalTeamRouter);
 
 const handleError: ErrorRequestHandler = (error, req, res, next) => {
   if (res.headersSent) { next(error); return; }

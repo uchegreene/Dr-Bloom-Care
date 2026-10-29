@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import {
 import { useAuth, useSignUp } from "@clerk/expo";
 import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
+import { isAdminPortalHost } from "@/lib/adminPortal";
 
 export default function SignUpScreen() {
   const colors = useColors();
@@ -65,6 +67,7 @@ export default function SignUpScreen() {
     });
   };
 
+  if (Platform.OS === "web" && typeof window !== "undefined" && isAdminPortalHost(window.location.hostname)) return <Redirect href="/(auth)/sign-in" />;
   if (isSignedIn) return <Redirect href="/" />;
 
   return (

@@ -26,6 +26,7 @@ import { useColors } from "@/hooks/useColors";
 import { useConfirmation } from "@/hooks/useConfirmation";
 import { useProfile } from "@/hooks/useProfileContext";
 import { AdminAccessManager } from "@/components/AdminAccessManager";
+import { StaffAccountCreator } from "@/components/StaffAccountCreator";
 
 const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
 const CATEGORIES = [
@@ -243,7 +244,10 @@ export default function AdminScreen() {
         </Text>
       ) : null}
 
-      {profile.isSuperAdmin ? <AdminAccessManager members={membersQuery.data ?? []} currentUserId={profile.userId} /> : null}
+      {profile.isSuperAdmin ? <>
+        <StaffAccountCreator userId={profile.userId} />
+        <AdminAccessManager members={membersQuery.data ?? []} currentUserId={profile.userId} />
+      </> : null}
       <Section title="Monthly plan fees">
         <Field label="Cycle plan (₦)" value={cyclePrice} onChangeText={setCyclePrice} keyboardType="number-pad" />
         <TouchableOpacity
@@ -346,7 +350,7 @@ export default function AdminScreen() {
         </TouchableOpacity>
       </Section>
 
-      <Section title="Medical team access">
+      {profile.isSuperAdmin ? <Section title="Medical team access">
         <Text style={[styles.caption, { color: colors.mutedForeground }]}>
           Link a registered member to an existing verified advisor profile. They answer under that profile and share the team inbox.
         </Text>
@@ -393,6 +397,8 @@ export default function AdminScreen() {
           <Text style={[styles.actionText, { color: colors.primaryForeground }]}>{assignTeam.isPending ? "Authorising…" : "Authorise medical-team access"}</Text>
         </TouchableOpacity>
       </Section>
+
+      : <Text style={[styles.caption, { color: colors.mutedForeground }]}>Only the super admin can create staff accounts or change medical-team assignments.</Text>}
 
       <Section title="Member subscriptions">
         {membersQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}

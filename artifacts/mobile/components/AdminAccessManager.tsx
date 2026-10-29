@@ -18,7 +18,7 @@ export function AdminAccessManager({ members, currentUserId }: { members: AdminM
   const label = { color: colors.foreground, fontFamily: "Nunito_700Bold", fontSize: 15 };
   const change = async (member: Pick<AdminMember, "userId" | "email">, enabled: boolean) => {
     if (!await confirm(enabled ? "Assign administrator?" : "Remove administrator access?",
-      `${member.email}${enabled ? " will be able to manage fees, professional profiles and medical-team assignments. Only you can assign other administrators." : " will lose administrator permissions immediately. Their account, membership and records will remain."}`,
+      `${member.email}${enabled ? " will be able to manage fees and professional profiles. Only the super admin can create staff accounts or assign staff and administrators." : " will lose administrator permissions immediately. Their account, membership and records will remain."}`,
       enabled ? "Assign administrator" : "Remove access", "Cancel")) return;
     try {
       await mutation.mutateAsync({ userId: member.userId, data: { active: enabled } });

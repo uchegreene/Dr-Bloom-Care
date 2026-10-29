@@ -17,12 +17,13 @@ export function AdminPortalGate({ children }: { children: ReactNode }) {
   const colors = useColors();
   const portal = Platform.OS === "web" && typeof window !== "undefined" && isAdminPortalHost(window.location.hostname);
   const login = path === "/sign-in";
-  const admin = profile?.role === "admin";
+  const admin = profile?.role === "admin" || profile?.role === "medical_team";
+  const destination = !profile?.profileComplete ? "/onboarding" : profile.role === "medical_team" ? "/medical-team" : "/admin";
   useEffect(() => {
     if (!portal || !navigation?.key || !isLoaded) return;
     if (!isSignedIn && !login) router.replace("/(auth)/sign-in");
-    if (isSignedIn && !isLoading && admin && (path === "/" || login)) router.replace("/admin");
-  }, [portal, navigation?.key, isLoaded, isSignedIn, login, admin, isLoading, path, router]);
+    if (isSignedIn && !isLoading && admin && (path === "/" || login || path === "/sign-up")) router.replace(destination);
+  }, [portal, navigation?.key, isLoaded, isSignedIn, login, admin, isLoading, path, router, destination]);
   const blocked = portal && (!isLoaded || (isSignedIn ? (isLoading || !admin || path === "/" || login) : !login));
   return <View style={{ flex: 1 }}>
     {/* Keep the root navigator mounted so login redirects are safe on web and native. */}

@@ -120,6 +120,10 @@ const server = http.createServer((req, res) => {
   if (hostname === "admin.drbloomcare.com") {
     res.setHeader("X-Robots-Tag", "noindex, nofollow");
     res.setHeader("Cache-Control", "no-store");
+    if (pathname === "/sign-up" || pathname === "/(auth)/sign-up") {
+      res.writeHead(302, { Location: "/sign-in" });
+      return res.end();
+    }
     let decoded;
     try { decoded = decodeURIComponent(pathname); } catch { res.writeHead(400); return res.end("Invalid path"); }
     const candidate = path.resolve(ADMIN_WEB_ROOT, "." + decoded);

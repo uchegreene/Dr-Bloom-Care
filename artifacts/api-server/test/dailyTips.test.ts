@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import dailyTipRouter from "../src/routes/dailyTips";
 import bloomRouter from "../src/routes/bloom";
+import careRouter from "../src/routes/care";
 import { runDailyTipJob, runDailyDraftJob, publishApprovedTips } from "../src/jobs/dailyTips";
 import { dispatchTipPush } from "../src/jobs/dailyTipPush";
 import { nigeriaDate, publicationTime, eligibleTipPlan, tipDateOffset } from "../src/lib/dailyTipRules";
@@ -40,6 +41,7 @@ test("isolated DB: auth, premium access, review, scheduling, notifications and p
   app.use(express.json());
   app.use(dailyTipRouter);
   app.use(bloomRouter);
+  app.use(careRouter);
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
@@ -91,6 +93,36 @@ test("isolated DB: auth, premium access, review, scheduling, notifications and p
     assert.equal(delegated.isSuperAdmin, false);
     assert.equal((await adminApi("GET", "/admin/members", "cycle")).status, 200);
     assert.equal((await adminApi("GET", "/admin/assignments", "cycle")).status, 403);
+    const staffInput = { email: `staff_${suffix}@example.com`, name: "TEST created staff", role: "admin" };
+    assert.equal((await adminApi("POST", "/admin/staff-accounts", undefined, staffInput)).status, 401);
+    for (const role of ["free", "staff", "cycle"]) {
+      assert.equal((await adminApi("POST", "/admin/staff-accounts", role, staffInput)).status, 403);
+    }
+    assert.equal((await adminApi("POST", "/admin/medical-team", "cycle", {})).status, 403);
+    assert.equal((await adminApi("DELETE", `/admin/medical-team/${user("staff")}`, "cycle")).status, 403);
+    assert.equal((await adminApi("POST", "/admin/staff-accounts", "admin", { ...staffInput, role: "super_admin" })).status, 400);
+    assert.equal((await adminApi("POST", "/admin/staff-accounts", "admin", { ...staffInput, role: "medical_team" })).status, 400);
+    assert.equal((await adminApi("POST", "/admin/staff-accounts", "admin", {
+      ...staffInput, role: "medical_team", advisorId: advisor.id,
+    })).status, 409);
+    const createdStaff = await adminApi("POST", "/admin/staff-accounts", "admin", staffInput);
+    assert.equal(createdStaff.status, 201);
+    assert.equal(createdStaff.data.role, "admin");
+    assert.deepEqual(Object.keys(createdStaff.data).sort(), ["email", "role", "userId"]);
+    const [staffAccount] = await db.select().from(accounts).where(eq(accounts.clerkUserId, createdStaff.data.userId));
+    assert.equal(staffAccount.subscriptionStatus, "free");
+    assert.equal(staffAccount.femaleOnlyConfirmed, false);
+    assert.equal(staffAccount.dateOfBirth, null);
+    assert.equal((await adminApi("POST", "/admin/staff-accounts", "admin", staffInput)).status, 409);
+    const [unassignedAdvisor] = await db.insert(advisors).values({
+      name: "TEST new professional", title: "TEST midwife", specialty: "TEST care",
+      credentials: "TEST", bio: "TEST", isActive: true, isVerified: true,
+    }).returning();
+    const createdMedical = await adminApi("POST", "/admin/staff-accounts", "admin", {
+      email: `medical_${suffix}@example.com`, name: "TEST new medical", role: "medical_team", advisorId: unassignedAdvisor.id,
+    });
+    assert.equal(createdMedical.status, 201);
+    assert.equal((await db.select().from(team).where(eq(team.userId, createdMedical.data.userId)))[0].advisorId, unassignedAdvisor.id);
     assert.equal((await adminApi("PUT", `/admin/assignments/${user("free")}`, "cycle", { active: true })).status, 403);
     assert.equal((await adminApi("PUT", `/admin/assignments/${user("cycle")}`, "admin", { active: false })).status, 200);
     assert.equal((await adminApi("GET", "/admin/members", "cycle")).status, 403);

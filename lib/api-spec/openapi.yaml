@@ -276,6 +276,30 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdvicePost"
+  /admin/staff-accounts:
+    post:
+      operationId: createStaffAccount
+      tags: [bloom]
+      summary: Super administrator creates a staff account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffAccountInput"
+      responses:
+        "201":
+          description: Staff account created; use email password recovery to choose a password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffAccountResult"
+        "403":
+          description: Super administrator required
+        "409":
+          description: Account or professional assignment already exists
   /admin/assignments:
     get:
       operationId: listAdminAssignments
@@ -654,6 +678,21 @@ components:
       type: http
       scheme: bearer
   schemas:
+    StaffAccountInput:
+      type: object
+      required: [email, name, role]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        role: { type: string, enum: [admin, medical_team] }
+        advisorId: { type: integer, minimum: 1 }
+    StaffAccountResult:
+      type: object
+      required: [userId, email, role]
+      properties:
+        userId: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, medical_team] }
     AdminAssignmentInput:
       type: object
       required: [active]
