@@ -18,6 +18,11 @@ const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const ADMIN_WEB_ROOT = path.resolve(__dirname, "..", "admin-web-build");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
+// Fail the deployment health check instead of accepting traffic with a missing portal.
+if (!fs.existsSync(path.join(ADMIN_WEB_ROOT, "index.html"))) {
+  throw new Error("Admin web export is missing from the deployment. Run the complete mobile build and include admin-web-build in the published image.");
+}
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
