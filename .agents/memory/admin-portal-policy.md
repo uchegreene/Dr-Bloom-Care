@@ -14,6 +14,12 @@ The admin domain is sign-in only. Only the super admin may register staff/sub-ad
 
 **How to apply:** Do not add public staff registration or let delegated administrators recruit/promote other staff. Keep medical-team permissions distinct from general administrator permissions and preserve ordinary member signup.
 
+Bootstrap the first super-admin identity separately from staff registration; do not require public signup to unlock a sign-in-only portal.
+
+**Why:** Recognizing an email as super admin does not create its authentication account, and a development account does not establish a production identity. The owner encountered “couldn't find your account” on the live portal.
+
+**How to apply:** Resolve the configured trusted owner identity in the target environment and provision it only if missing. Preserve existing passwords and accounts; never copy development user IDs or disclose shared/default passwords. Verify live access after publishing.
+
 Keep runtime-required generated exports out of Git, but not out of the deployment image.
 
 **Why:** A successful Expo web export was followed by a successful publish, yet the live admin domain returned 503 because the export directory was excluded by `.replitignore`. Build success alone did not establish that the final image contained the portal.

@@ -14,6 +14,43 @@ import { runDailyTipJob, runDailyDraftJob, publishApprovedTips } from "../src/jo
 import { dispatchTipPush } from "../src/jobs/dailyTipPush";
 import { nigeriaDate, publicationTime, eligibleTipPlan, tipDateOffset } from "../src/lib/dailyTipRules";
 import { modelInputs } from "./dailyTipsFixtures";
+import { ensureSuperAdminIdentity } from "../src/lib/superAdminBootstrap";
+
+test("super-admin bootstrap creates only the configured missing identity and preserves existing passwords", async () => {
+  const users = new Map<string, string>();
+  let creations = 0;
+  let lookups = 0;
+  const identityService = {
+    getUserList: async ({ emailAddress }: { emailAddress: string[]; limit: number }) => {
+      lookups++;
+      return { data: users.has(emailAddress[0]) ? [{ id: "TEST_owner" }] : [] };
+    },
+    createUser: async ({ emailAddress, password }: { emailAddress: string[]; password: string }) => {
+      creations++;
+      assert(password.length >= 48);
+      users.set(emailAddress[0], password);
+      return { id: "TEST_owner" };
+    },
+  };
+  assert.equal(await ensureSuperAdminIdentity(undefined, identityService), "not_configured");
+  assert.equal(lookups, 0);
+  await assert.rejects(ensureSuperAdminIdentity("invalid", identityService), /valid email/);
+  assert.equal(await ensureSuperAdminIdentity(" TEST_OWNER@example.com ", identityService), "created");
+  const originalPassword = users.get("test_owner@example.com");
+  assert.equal(await ensureSuperAdminIdentity("test_owner@example.com", identityService), "existing");
+  assert.equal(creations, 1);
+  assert.equal(users.get("test_owner@example.com"), originalPassword);
+
+  let raceLookups = 0;
+  assert.equal(await ensureSuperAdminIdentity("race@example.com", {
+    getUserList: async () => ({ data: ++raceLookups > 1 ? [{ id: "TEST_race_owner" }] : [] }),
+    createUser: async () => { throw new Error("TEST concurrent creation"); },
+  }), "existing");
+  await assert.rejects(ensureSuperAdminIdentity("failure@example.com", {
+    getUserList: async () => ({ data: [] }),
+    createUser: async () => { throw new Error("TEST provider unavailable"); },
+  }), /Unable to provision/);
+});
 
 test("Nigeria 9am boundaries, calendar rollover and exact paid entitlement", () => {
   assert.equal(nigeriaDate(new Date("2026-12-31T23:30:00Z")), "2027-01-01");
