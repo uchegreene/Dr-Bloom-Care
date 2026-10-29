@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity } from "react-native";
 import { useSignIn } from "@clerk/expo";
 import { useColors } from "@/hooks/useColors";
+import { authErrorMessage, completePasswordReset } from "@/lib/authFlow";
 
 /** Passwords and verification codes go directly to Clerk, never our application server. */
-export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { initialEmail: string; onBack: () => void; adminOnly?: boolean }) {
+export function PasswordRecovery({ initialEmail, onBack, onComplete, adminOnly = false }: { initialEmail: string; onBack: () => void; onComplete: () => Promise<void>; adminOnly?: boolean }) {
   const colors = useColors();
   const { signIn } = useSignIn();
-  const [step, setStep] = useState<"email" | "code" | "password" | "done">("email");
+  const [step, setStep] = useState<"email" | "code" | "password">("email");
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -25,8 +26,7 @@ export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { 
     setMessage("");
     try { await action(); }
     catch (error) {
-      const problem = error as { longMessage?: string; message?: string };
-      setMessage(problem.longMessage || problem.message || "Unable to complete this step. Please try again.");
+      setMessage(error instanceof Error && !("code" in error) ? error.message : authErrorMessage(error));
     } finally { setBusy(false); }
   };
   const sendCode = async () => {
@@ -47,14 +47,11 @@ export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { 
       setStep("password");
       return;
     }
-    if (password.length < 8) throw new Error("Use at least 8 characters.");
-    if (password !== confirm) throw new Error("The passwords do not match.");
-    const result = await signIn.resetPasswordEmailCode.submitPassword({ password });
-    if (result.error) throw result.error;
-    setPassword("");
-    setConfirm("");
-    // Do not finalize a session here: normal sign-in must still enforce any required MFA.
-    setStep("done");
+    await completePasswordReset(password, confirm, params => signIn.resetPasswordEmailCode.submitPassword(params), async () => {
+      setPassword("");
+      setConfirm("");
+      await onComplete();
+    });
   });
   const disabled = busy || (step === "email" ? !email.trim() : step === "code" ? !code.trim() : password.length < 8 || password !== confirm);
 
@@ -62,13 +59,12 @@ export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { 
     contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 26, paddingBottom: 48 }}
     keyboardShouldPersistTaps="handled">
     <Text style={{ fontFamily: "Nunito_700Bold", color: colors.foreground, fontSize: 26 }}>
-      {step === "done" ? "Password updated" : "Reset your password"}
+      Reset your password
     </Text>
     <Text style={{ color: colors.mutedForeground, fontSize: 15, lineHeight: 23, marginTop: 12 }}>
       {step === "email" ? "Enter the email registered to your account. We’ll send a verification code so you can choose a new password. Administrator access stays unchanged."
         : step === "code" ? `Enter the verification code sent to ${email.trim()}.`
-        : step === "password" ? "Choose a new password with at least 8 characters."
-        : "Your password has been updated. Return to sign in with your new password. Any required two-step verification still applies."}
+        : "Choose a new password with at least 8 characters. We’ll then complete your sign-in, including any required verification."}
     </Text>
     {step === "email" ? <>
       <Text style={labelStyle}>Account email</Text>
@@ -98,11 +94,11 @@ export function PasswordRecovery({ initialEmail, onBack, adminOnly = false }: { 
       {confirm && password !== confirm ? <Text style={{ color: "#B42318", marginTop: 10 }}>The passwords do not match.</Text> : null}
     </> : null}
     {message ? <Text accessibilityRole="alert" style={{ color: "#B42318", marginTop: 16 }}>{message}</Text> : null}
-    {step !== "done" ? <TouchableOpacity disabled={disabled} onPress={submit} accessibilityRole="button"
+    <TouchableOpacity disabled={disabled} onPress={submit} accessibilityRole="button"
       style={{ backgroundColor: colors.primary, opacity: disabled ? 0.55 : 1, padding: 16, borderRadius: 14, marginTop: 24, alignItems: "center" }}>
       {busy ? <ActivityIndicator color={colors.primaryForeground} /> :
         <Text style={{ color: colors.primaryForeground, fontWeight: "700" }}>{step === "email" ? "Send reset code" : step === "code" ? "Verify code" : "Save new password"}</Text>}
-    </TouchableOpacity> : null}
+    </TouchableOpacity>
     <TouchableOpacity disabled={busy} onPress={onBack} accessibilityRole="button" style={{ alignItems: "center", padding: 18, marginTop: 10 }}>
       <Text style={{ color: colors.primary, fontWeight: "700" }}>Back to sign in</Text>
     </TouchableOpacity>

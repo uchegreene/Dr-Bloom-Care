@@ -9,53 +9,112 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
-import { useAuth, useSignIn } from "@clerk/expo";
+import { useAuth, useClerk, useSignIn } from "@clerk/expo";
 import { Redirect, Link, type Href, useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { PasswordRecovery } from "@/components/PasswordRecovery";
 import { isAdminPortalHost } from "@/lib/adminPortal";
+import { SignInVerification } from "@/components/SignInVerification";
+import { authErrorMessage, canResumeCompletedSignIn, nextSignInStep, type VerificationMethod } from "@/lib/authFlow";
 
 export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, fetchStatus } = useSignIn();
+  const { setActive } = useClerk();
   const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [recovering, setRecovering] = useState(false);
-  const busy = fetchStatus === "fetching";
+  const [working, setWorking] = useState(false);
+  const [verification, setVerification] = useState<VerificationMethod | null>(null);
+  const [code, setCode] = useState("");
+  const [resendAt, setResendAt] = useState(0);
+  const busy = working || fetchStatus === "fetching";
   const adminPortal = Platform.OS === "web" && typeof window !== "undefined" && isAdminPortalHost(window.location.hostname);
 
-  const submit = async () => {
+  const navigate = ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
+    const destination = decorateUrl("/");
+    if (Platform.OS === "web" && /^https?:\/\//.test(destination)) window.location.assign(destination);
+    else router.replace(destination as Href);
+  };
+  const run = async (action: () => Promise<void>) => {
+    if (working) return;
+    setWorking(true);
     setMessage("");
+    try { await action(); }
+    catch (error) { setMessage(error instanceof Error && !("code" in error) ? error.message : authErrorMessage(error)); }
+    finally { setWorking(false); }
+  };
+  const sendEmailCode = async () => {
+    const result = await signIn.mfa.sendEmailCode();
+    if (result.error) throw result.error;
+    setResendAt(Date.now() + 60_000);
+    setMessage("A verification code has been sent to your account email.");
+  };
+  const advance = async () => {
+    const next = nextSignInStep(signIn.status, signIn.supportedSecondFactors.map(factor => factor.strategy));
+    if (next === "finalize") {
+      const result = await signIn.finalize({ navigate });
+      if (result.error) throw result.error;
+      return;
+    }
+    if (next !== "unsupported") {
+      setVerification(next);
+      setCode("");
+      if (next === "email_code") await sendEmailCode();
+      return;
+    }
+    throw new Error(`Your sign-in requires another step (${signIn.status}). No administrator permissions have been changed.`);
+  };
+  const submit = () => run(async () => {
+    // Resume a reset-created, fully verified session left by an older app version.
+    // Never reuse an incomplete attempt or one belonging to a different email.
+    if (canResumeCompletedSignIn(signIn.status, signIn.identifier, email)) {
+      await advance();
+      return;
+    }
     const result = await signIn.password({
-      identifier: email.trim(),
+      identifier: email.trim().toLowerCase(),
       password,
     });
     if (result.error) {
-      setMessage(
-        errors.fields.identifier?.message ??
-          errors.fields.password?.message ??
-          "We couldn't sign you in. Check your email and password.",
-      );
-      return;
+      // Password recovery can already have created a session for this browser.
+      // Only use the session explicitly returned by Clerk for this same client.
+      if (signIn.existingSession) {
+        await setActive({ session: signIn.existingSession.sessionId, navigate });
+        return;
+      }
+      throw result.error;
     }
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          router.replace(decorateUrl("/") as Href);
-        },
-      });
-      return;
-    }
-    setMessage(
-      "This account needs an additional verification step. Use email verification or contact support.",
-    );
-  };
+    await advance();
+  });
 
   if (isSignedIn) return <Redirect href="/" />;
-  if (recovering) return <PasswordRecovery initialEmail={email} adminOnly={adminPortal} onBack={() => {
+  if (verification) return <SignInVerification method={verification}
+    available={signIn.supportedSecondFactors.map(factor => factor.strategy)} code={code} setCode={setCode}
+    message={message} busy={busy} verify={() => run(async () => {
+      const result = verification === "email_code" ? await signIn.mfa.verifyEmailCode({ code: code.trim() })
+        : verification === "totp" ? await signIn.mfa.verifyTOTP({ code: code.trim() })
+        : await signIn.mfa.verifyBackupCode({ code: code.trim() });
+      if (result.error) throw result.error;
+      await advance();
+    })} chooseMethod={method => run(async () => {
+      setVerification(method); setCode("");
+      if (method === "email_code") await sendEmailCode();
+    })} resend={() => run(async () => {
+      if (Date.now() < resendAt) throw new Error("Please wait one minute before requesting another code.");
+      await sendEmailCode();
+    })} back={() => run(async () => {
+      const result = await signIn.reset();
+      if (result.error) throw result.error;
+      setVerification(null); setCode(""); setPassword("");
+    })} />;
+  if (recovering) return <PasswordRecovery initialEmail={email} adminOnly={adminPortal} onComplete={async () => {
+    setPassword(""); setRecovering(false);
+    await run(advance);
+  }} onBack={() => {
     setPassword("");
     setMessage("");
     setRecovering(false);

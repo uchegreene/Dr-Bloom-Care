@@ -10,6 +10,7 @@
 - [Pregnancy reminder continuity](pregnancy-reminder-policy.md) — mode/billing changes must not silently cancel existing medical alerts; lock-screen details stay generic.
 - [Test-browser memory](test-browser-memory.md) — abandoned Chromium processes can exhaust memory and stall Node startup; check resources before retrying tools.
 - [Password minimum](password-policy.md) — owner requires an eight-character minimum; signup validation and the authentication provider must agree.
+- [Password reset sessions](clerk-reset-session-policy.md) — complete the reset-created sign-in session instead of forcing a second password login; preserve MFA and browser verification.
 - [Branding continuity](branding-continuity.md) — display-name changes must preserve accounts, health logs, app identifiers and existing professional identities.
 - [Daily AI tip policy](daily-ai-tip-policy.md) — medical approval before publishing at 9 a.m. Nigeria time; paid audiences and private-health-data boundaries.
 - [OpenAPI body components](openapi-body-components.md) — named input components avoid duplicate validation/model exports from inline request bodies.
