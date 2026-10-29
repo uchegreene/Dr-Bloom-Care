@@ -26,6 +26,7 @@ import {
 } from "../middlewares/bloomAuth";
 import { clerkClient } from "@clerk/express";
 import staffAccountsRouter from "./staffAccounts";
+import { UpdateStaffProfileBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 router.use(staffAccountsRouter);
@@ -68,7 +69,7 @@ async function ensureAccount(userId: string, email: string) {
   return created;
 }
 
-function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean, advisorId: number | null = null, isSuperAdmin = false) {
+function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmin: boolean, advisorId: number | null = null, isSuperAdmin = false, staffProfile: BloomRequest["bloomStaffProfile"] = null, assignedProfileName: string | null = null) {
   const subscriptionStatus = statusFor(
     account.subscriptionStatus,
     account.subscriptionExpiresAt,
@@ -85,13 +86,15 @@ function accountResponse(account: typeof bloomAccountsTable.$inferSelect, isAdmi
     role: isAdmin ? "admin" : advisorId ? "medical_team" : "member",
     isSuperAdmin,
     advisorId,
+    assignedProfileName,
     subscriptionPlan: account.subscriptionPlan as "cycle" | "pregnancy" | null,
     subscriptionStatus,
     subscriptionExpiresAt: account.subscriptionExpiresAt,
     requestedPlan: account.requestedPlan as "cycle" | "pregnancy" | null,
     requestedAt: account.requestedAt,
     subscriptionActive: subscriptionStatus === "active",
-    profileComplete: Boolean(
+    staffProfile: isAdmin || advisorId !== null ? staffProfile : null,
+    profileComplete: isAdmin || advisorId !== null ? Boolean(staffProfile) : Boolean(
       account.username &&
         account.name &&
         account.dateOfBirth &&
@@ -109,7 +112,32 @@ router.get("/account", requireBloomMember, async (req, res) => {
   const { bloomUserId, bloomEmail } = req as BloomRequest;
   const account = await ensureAccount(bloomUserId!, bloomEmail!);
   const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
-  res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin));
+  res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin, (req as BloomRequest).bloomStaffProfile, access.advisorName));
+});
+
+router.put("/staff/profile", requireBloomMember, async (req, res) => {
+  const { bloomUserId, bloomEmail } = req as BloomRequest;
+  const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
+  if (!access.isAdmin && access.advisorId === null) {
+    res.status(403).json({ error: "Only accounts assigned by the super administrator can complete staff setup." });
+    return;
+  }
+  const parsed = UpdateStaffProfileBody.strict().safeParse(req.body);
+  if (!parsed.success || parsed.data.name.trim().length < 2 || !Number.isInteger(parsed.data.age)) {
+    res.status(400).json({ error: "Enter your name, choose a gender, and enter a whole-number age from 13 to 120. Your assigned email cannot be changed here." });
+    return;
+  }
+  const details = { ...parsed.data, name: parsed.data.name.trim() };
+  try {
+    const account = await ensureAccount(bloomUserId!, bloomEmail!);
+    await clerkClient.users.updateUserMetadata(bloomUserId!, { privateMetadata: { bloomStaffProfile: details } });
+    const [saved] = await db.update(bloomAccountsTable).set({ name: details.name, email: bloomEmail!, updatedAt: new Date() })
+      .where(eq(bloomAccountsTable.clerkUserId, account.clerkUserId)).returning();
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(accountResponse(saved, access.isAdmin, access.advisorId, access.isSuperAdmin, details, access.advisorName));
+  } catch {
+    res.status(503).json({ error: "Your staff profile could not be saved. Please try again." });
+  }
 });
 
 router.put("/account", requireBloomMember, async (req, res) => {
@@ -159,7 +187,7 @@ router.put("/account", requireBloomMember, async (req, res) => {
       })
       .returning();
     const access = await medicalAccessFor(bloomUserId!, bloomEmail!);
-    res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin));
+    res.json(accountResponse(account, access.isAdmin, access.advisorId, access.isSuperAdmin, (req as BloomRequest).bloomStaffProfile, access.advisorName));
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
       res.status(409).json({ error: "That username is already in use." });

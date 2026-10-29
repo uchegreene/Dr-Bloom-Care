@@ -63,6 +63,8 @@ export * from './staffAccountInput';
 export * from './staffAccountInputRole';
 export * from './staffAccountResult';
 export * from './staffAccountResultRole';
+export * from './staffProfileInput';
+export * from './staffProfileInputGender';
 export * from './subscriptionRequest';
 export * from './subscriptionRequestInput';
 export * from './subscriptionRequestInputPlan';

@@ -214,6 +214,29 @@ export const MemberAccountRequestedPlan = {
   pregnancy: 'pregnancy',
 } as const;
 
+export type StaffProfileInputGender = typeof StaffProfileInputGender[keyof typeof StaffProfileInputGender];
+
+
+export const StaffProfileInputGender = {
+  female: 'female',
+  male: 'male',
+  other: 'other',
+} as const;
+
+export interface StaffProfileInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  gender: StaffProfileInputGender;
+  /**
+     * @minimum 13
+     * @maximum 120
+     */
+  age: number;
+}
+
 export interface MemberAccount {
   userId: string;
   email: string;
@@ -231,6 +254,8 @@ export interface MemberAccount {
   /** @nullable */
   advisorId: number | null;
   /** @nullable */
+  assignedProfileName?: string | null;
+  /** @nullable */
   subscriptionPlan: MemberAccountSubscriptionPlan;
   subscriptionStatus: MemberAccountSubscriptionStatus;
   /** @nullable */
@@ -241,6 +266,7 @@ export interface MemberAccount {
   requestedAt: string | null;
   subscriptionActive: boolean;
   profileComplete: boolean;
+  staffProfile?: StaffProfileInput | null;
 }
 
 export type AccountInputMode = typeof AccountInputMode[keyof typeof AccountInputMode];

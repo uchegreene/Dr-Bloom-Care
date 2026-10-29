@@ -13,6 +13,8 @@ import { paidAccessAt } from "@/lib/subscriptionAccess";
 import {
   useGetAccount,
   useUpdateAccount,
+  useUpdateStaffProfile,
+  type StaffProfileInput,
   type MemberAccount,
 } from "@workspace/api-client-react";
 
@@ -31,6 +33,7 @@ export interface Profile {
   role: "member" | "admin" | "medical_team";
   isSuperAdmin: boolean;
   advisorId: number | null;
+  assignedProfileName: string | null;
   subscriptionPlan: SubscriptionPlan | null;
   subscriptionStatus: "free" | "active" | "expired";
   subscriptionExpiresAt: string | null;
@@ -38,6 +41,7 @@ export interface Profile {
   requestedAt: string | null;
   subscriptionActive: boolean;
   profileComplete: boolean;
+  staffProfile: { name: string; gender: "female" | "male" | "other"; age: number } | null;
 }
 
 interface ProfileContextType {
@@ -46,6 +50,7 @@ interface ProfileContextType {
   profileError: string | null;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   completeOnboarding: (data: Pick<Profile, "username" | "name" | "dateOfBirth" | "bio" | "femaleOnlyConfirmed" | "mode">) => Promise<void>;
+  completeStaffOnboarding: (data: StaffProfileInput) => Promise<void>;
   refreshAccount: () => Promise<void>;
 }
 
@@ -64,6 +69,7 @@ function mapAccount(account: MemberAccount): Profile {
     role: account.role,
     isSuperAdmin: account.isSuperAdmin === true,
     advisorId: account.advisorId,
+    assignedProfileName: account.assignedProfileName ?? null,
     subscriptionPlan: account.subscriptionPlan,
     subscriptionStatus: account.subscriptionStatus === "active" && !paidAccessAt(true, account.subscriptionExpiresAt ? String(account.subscriptionExpiresAt) : null)
       ? "expired" : account.subscriptionStatus,
@@ -74,6 +80,7 @@ function mapAccount(account: MemberAccount): Profile {
     requestedAt: account.requestedAt ? String(account.requestedAt) : null,
     subscriptionActive: paidAccessAt(account.subscriptionActive, account.subscriptionExpiresAt ? String(account.subscriptionExpiresAt) : null),
     profileComplete: account.profileComplete,
+    staffProfile: account.staffProfile ?? null,
   };
 }
 
@@ -90,6 +97,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     },
   });
   const updateAccount = useUpdateAccount();
+  const updateStaff = useUpdateStaffProfile();
 
   useEffect(() => {
     const listener = AppState.addEventListener("change", state => {
@@ -184,6 +192,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     [saveAccount],
   );
 
+  const completeStaffOnboarding = useCallback(async (data: StaffProfileInput) => {
+    const result = await updateStaff.mutateAsync({ data });
+    // Update the same profile state that admin gates actually consume.
+    setProfile(mapAccount(result));
+  }, [updateStaff]);
+
   const refreshAccount = useCallback(async () => {
     await accountQuery.refetch();
   }, [accountQuery]);
@@ -200,6 +214,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         : null,
       updateProfile,
       completeOnboarding,
+      completeStaffOnboarding,
       refreshAccount,
     }),
     [
@@ -211,6 +226,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       updateAccount.isPending,
       updateProfile,
       completeOnboarding,
+      completeStaffOnboarding,
       refreshAccount,
     ],
   );

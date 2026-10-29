@@ -42,7 +42,7 @@ export function StaffAccountCreator({ userId }: { userId: string }) {
   return <View style={{ gap: 12, borderWidth: 1, borderColor: colors.border, padding: 18, borderRadius: 16, backgroundColor: colors.card }}>
     <Text style={[label, { fontSize: 19 }]}>Create staff account</Text>
     <Text style={{ color: colors.mutedForeground }}>Super admin only. Staff cannot register through this portal. Medical access does not grant general administrator permissions.</Text>
-    <TextInput accessibilityLabel="Staff display name" placeholder="Staff display name" placeholderTextColor={colors.mutedForeground} value={name} onChangeText={setName} editable={!create.isPending} style={input} />
+    <TextInput accessibilityLabel="Staff personal name" placeholder="Staff personal name" placeholderTextColor={colors.mutedForeground} value={name} onChangeText={setName} editable={!create.isPending} style={input} />
     <TextInput accessibilityLabel="Staff email" placeholder="Staff email" placeholderTextColor={colors.mutedForeground} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!create.isPending} style={input} />
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
       {(["medical_team", "admin"] as const).map(option => <TouchableOpacity key={option} disabled={create.isPending} onPress={() => setRole(option)} accessibilityRole="radio" accessibilityState={{ checked: role === option }} style={[input, { borderColor: role === option ? colors.primary : colors.border }]}>
@@ -50,7 +50,8 @@ export function StaffAccountCreator({ userId }: { userId: string }) {
       </TouchableOpacity>)}
     </View>
     {role === "medical_team" ? <>
-      <Text style={label}>Verified professional profile</Text>
+      <Text style={label}>Assigned professional profile name</Text>
+      <Text style={{ color: colors.mutedForeground }}>Choose the public name this professional will use for advice and medical replies. It is separate from their personal account name and cannot be changed in staff setup.</Text>
       {advisors.isLoading || team.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {advisors.error || team.error ? <TouchableOpacity onPress={() => { advisors.refetch(); team.refetch(); }}><Text style={{ color: colors.destructive }}>Could not load profiles. Tap to retry.</Text></TouchableOpacity> : choices.map(a => <TouchableOpacity key={a.id} disabled={create.isPending} onPress={() => setAdvisorId(a.id)} style={[input, { borderColor: advisorId === a.id ? colors.primary : colors.border }]}>
         <Text style={label}>{a.name} · {a.title}{advisorId === a.id ? " · Selected" : ""}</Text>

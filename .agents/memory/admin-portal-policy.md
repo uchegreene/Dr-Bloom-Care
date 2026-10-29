@@ -14,6 +14,12 @@ The admin domain is sign-in only. Only the super admin may register staff/sub-ad
 
 **How to apply:** Do not add public staff registration or let delegated administrators recruit/promote other staff. Keep medical-team permissions distinct from general administrator permissions and preserve ordinary member signup.
 
+Assigned staff complete a separate setup form with only name, assigned email (automatic and read-only), gender, and age.
+
+**Why:** The owner explicitly rejected sending administrators through ordinary member signup and requested these four fields instead.
+
+**How to apply:** Select staff setup from server-verified assignments, including the super administrator and medical team. Do not require a public handle, pregnancy/cycle choice, subscription, patient consent, or date of birth for staff setup; never fabricate patient details from staff demographics.
+
 Bootstrap the first super-admin identity separately from staff registration; do not require public signup to unlock a sign-in-only portal.
 
 **Why:** Recognizing an email as super admin does not create its authentication account, and a development account does not establish a production identity. The owner encountered “couldn't find your account” on the live portal.

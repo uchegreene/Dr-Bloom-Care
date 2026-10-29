@@ -1,6 +1,7 @@
 /** Test-bundle aliases only. These are never imported by the real API. */
 export const getAuth = (req: { header(name: string): string | undefined }) => ({ userId: req.header("x-fixture-user") ?? null });
 const staffIdentities = new Map<string, string>();
+const privateProfiles = new Map<string, unknown>();
 export const removedStaffIdentities: string[] = [];
 export const clerkClient = { users: {
 getUserList: async ({ emailAddress }: { emailAddress: string[] }) => ({
@@ -13,8 +14,13 @@ createUser: async ({ emailAddress, password }: { emailAddress: string[]; passwor
   return { id };
 },
 deleteUser: async (id: string) => { staffIdentities.delete(id); removedStaffIdentities.push(id); },
+updateUserMetadata: async (id: string, data: { privateMetadata: { bloomStaffProfile: unknown } }) => {
+  privateProfiles.set(id, data.privateMetadata.bloomStaffProfile);
+  return { id };
+},
 getUser: async (id: string) => ({
   id, primaryEmailAddressId: "fixture-email",
+  privateMetadata: { bloomStaffProfile: privateProfiles.get(id) },
   emailAddresses: [{ id: "fixture-email", emailAddress: staffIdentities.get(id) ?? `${id.toLowerCase()}@example.com`,
     verification: { status: id.includes("_unverified_") ? "unverified" : "verified" } }],
 }) } };

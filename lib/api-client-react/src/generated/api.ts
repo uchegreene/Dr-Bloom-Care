@@ -55,6 +55,7 @@ import type {
   PlanPricing,
   StaffAccountInput,
   StaffAccountResult,
+  StaffProfileInput,
   SubscriptionRequestInput
 } from './api.schemas';
 
@@ -1114,6 +1115,76 @@ export const useUpdateAccount = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateAccountMutationOptions(options));
+    }
+
+export const getUpdateStaffProfileUrl = () => {
+
+
+
+
+  return `/api/staff/profile`
+}
+
+/**
+ * @summary Complete the assigned staff account profile
+ */
+export const updateStaffProfile = async (staffProfileInput: StaffProfileInput, options?: RequestInit): Promise<MemberAccount> => {
+
+  return customFetch<MemberAccount>(getUpdateStaffProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(staffProfileInput)
+  }
+);}
+
+
+
+
+export const getUpdateStaffProfileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStaffProfile>>, TError,{data: BodyType<StaffProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateStaffProfile>>, TError,{data: BodyType<StaffProfileInput>}, TContext> => {
+
+const mutationKey = ['updateStaffProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateStaffProfile>>, {data: BodyType<StaffProfileInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateStaffProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateStaffProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateStaffProfile>>>
+    export type UpdateStaffProfileMutationBody = BodyType<StaffProfileInput>
+    export type UpdateStaffProfileMutationError = ErrorType<void>
+
+    /**
+ * @summary Complete the assigned staff account profile
+ */
+export const useUpdateStaffProfile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStaffProfile>>, TError,{data: BodyType<StaffProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateStaffProfile>>,
+        TError,
+        {data: BodyType<StaffProfileInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateStaffProfileMutationOptions(options));
     }
 
 export const getListPlansUrl = () => {

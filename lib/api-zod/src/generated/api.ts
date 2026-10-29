@@ -207,6 +207,14 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get the signed-in member account
  */
+export const getAccountResponseStaffProfileOneNameMin = 2;
+export const getAccountResponseStaffProfileOneNameMax = 100;
+
+export const getAccountResponseStaffProfileOneAgeMin = 13;
+export const getAccountResponseStaffProfileOneAgeMax = 120;
+
+
+
 export const GetAccountResponse = zod.object({
   "userId": zod.string(),
   "email": zod.string(),
@@ -219,13 +227,19 @@ export const GetAccountResponse = zod.object({
   "role": zod.enum(['member', 'admin', 'medical_team']),
   "isSuperAdmin": zod.boolean().optional(),
   "advisorId": zod.number().nullable(),
+  "assignedProfileName": zod.string().nullish(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
   "subscriptionExpiresAt": zod.coerce.date().nullable(),
   "requestedPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "requestedAt": zod.coerce.date().nullable(),
   "subscriptionActive": zod.boolean(),
-  "profileComplete": zod.boolean()
+  "profileComplete": zod.boolean(),
+  "staffProfile": zod.union([zod.object({
+  "name": zod.string().min(getAccountResponseStaffProfileOneNameMin).max(getAccountResponseStaffProfileOneNameMax),
+  "gender": zod.enum(['female', 'male', 'other']),
+  "age": zod.number().min(getAccountResponseStaffProfileOneAgeMin).max(getAccountResponseStaffProfileOneAgeMax)
+}),zod.null()]).optional()
 })
 
 
@@ -252,6 +266,14 @@ export const UpdateAccountBody = zod.object({
   "mode": zod.enum(['cycle', 'pregnant', 'none'])
 })
 
+export const updateAccountResponseStaffProfileOneNameMin = 2;
+export const updateAccountResponseStaffProfileOneNameMax = 100;
+
+export const updateAccountResponseStaffProfileOneAgeMin = 13;
+export const updateAccountResponseStaffProfileOneAgeMax = 120;
+
+
+
 export const UpdateAccountResponse = zod.object({
   "userId": zod.string(),
   "email": zod.string(),
@@ -264,13 +286,72 @@ export const UpdateAccountResponse = zod.object({
   "role": zod.enum(['member', 'admin', 'medical_team']),
   "isSuperAdmin": zod.boolean().optional(),
   "advisorId": zod.number().nullable(),
+  "assignedProfileName": zod.string().nullish(),
   "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
   "subscriptionExpiresAt": zod.coerce.date().nullable(),
   "requestedPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
   "requestedAt": zod.coerce.date().nullable(),
   "subscriptionActive": zod.boolean(),
-  "profileComplete": zod.boolean()
+  "profileComplete": zod.boolean(),
+  "staffProfile": zod.union([zod.object({
+  "name": zod.string().min(updateAccountResponseStaffProfileOneNameMin).max(updateAccountResponseStaffProfileOneNameMax),
+  "gender": zod.enum(['female', 'male', 'other']),
+  "age": zod.number().min(updateAccountResponseStaffProfileOneAgeMin).max(updateAccountResponseStaffProfileOneAgeMax)
+}),zod.null()]).optional()
+})
+
+
+/**
+ * @summary Complete the assigned staff account profile
+ */
+export const updateStaffProfileBodyNameMin = 2;
+export const updateStaffProfileBodyNameMax = 100;
+
+export const updateStaffProfileBodyAgeMin = 13;
+export const updateStaffProfileBodyAgeMax = 120;
+
+
+
+export const UpdateStaffProfileBody = zod.object({
+  "name": zod.string().min(updateStaffProfileBodyNameMin).max(updateStaffProfileBodyNameMax),
+  "gender": zod.enum(['female', 'male', 'other']),
+  "age": zod.number().min(updateStaffProfileBodyAgeMin).max(updateStaffProfileBodyAgeMax)
+})
+
+export const updateStaffProfileResponseStaffProfileOneNameMin = 2;
+export const updateStaffProfileResponseStaffProfileOneNameMax = 100;
+
+export const updateStaffProfileResponseStaffProfileOneAgeMin = 13;
+export const updateStaffProfileResponseStaffProfileOneAgeMax = 120;
+
+
+
+export const UpdateStaffProfileResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "username": zod.string().nullable(),
+  "name": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "bio": zod.string(),
+  "femaleOnlyConfirmed": zod.boolean(),
+  "mode": zod.enum(['cycle', 'pregnant', 'none']),
+  "role": zod.enum(['member', 'admin', 'medical_team']),
+  "isSuperAdmin": zod.boolean().optional(),
+  "advisorId": zod.number().nullable(),
+  "assignedProfileName": zod.string().nullish(),
+  "subscriptionPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
+  "subscriptionStatus": zod.enum(['free', 'active', 'expired']),
+  "subscriptionExpiresAt": zod.coerce.date().nullable(),
+  "requestedPlan": zod.union([zod.literal('cycle'),zod.literal('pregnancy'),zod.literal(null)]).nullable(),
+  "requestedAt": zod.coerce.date().nullable(),
+  "subscriptionActive": zod.boolean(),
+  "profileComplete": zod.boolean(),
+  "staffProfile": zod.union([zod.object({
+  "name": zod.string().min(updateStaffProfileResponseStaffProfileOneNameMin).max(updateStaffProfileResponseStaffProfileOneNameMax),
+  "gender": zod.enum(['female', 'male', 'other']),
+  "age": zod.number().min(updateStaffProfileResponseStaffProfileOneAgeMin).max(updateStaffProfileResponseStaffProfileOneAgeMax)
+}),zod.null()]).optional()
 })
 
 

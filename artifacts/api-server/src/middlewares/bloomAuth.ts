@@ -2,10 +2,12 @@ import { clerkClient, getAuth } from "@clerk/express";
 import { adminAssignmentsTable, bloomAccountsTable, bloomAdvisorsTable, medicalTeamTable, db } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import type { NextFunction, Request, Response } from "express";
+import { UpdateStaffProfileBody } from "@workspace/api-zod";
 
 export interface BloomRequest extends Request {
   bloomUserId?: string;
   bloomEmail?: string;
+  bloomStaffProfile?: { name: string; gender: "female" | "male" | "other"; age: number } | null;
 }
 
 export function isBloomSuperAdmin(email: string) {
@@ -21,12 +23,12 @@ export async function isBloomAdmin(userId: string, email: string) {
 }
 
 export async function medicalAccessFor(userId: string, email: string) {
-  const [assignment] = await db.select({ advisorId: medicalTeamTable.advisorId })
+  const [assignment] = await db.select({ advisorId: medicalTeamTable.advisorId, advisorName: bloomAdvisorsTable.name })
     .from(medicalTeamTable)
     .innerJoin(bloomAdvisorsTable, eq(medicalTeamTable.advisorId, bloomAdvisorsTable.id))
     .where(and(eq(medicalTeamTable.userId, userId), eq(bloomAdvisorsTable.isActive, true), eq(bloomAdvisorsTable.isVerified, true)))
     .limit(1);
-  return { isAdmin: await isBloomAdmin(userId, email), isSuperAdmin: isBloomSuperAdmin(email), advisorId: assignment?.advisorId ?? null };
+  return { isAdmin: await isBloomAdmin(userId, email), isSuperAdmin: isBloomSuperAdmin(email), advisorId: assignment?.advisorId ?? null, advisorName: assignment?.advisorName ?? null };
 }
 
 export async function hasActiveMembership(userId: string) {
@@ -61,6 +63,10 @@ export async function requireBloomMember(
 
     (req as BloomRequest).bloomUserId = userId;
     (req as BloomRequest).bloomEmail = primaryEmail.emailAddress.toLowerCase();
+    // Private, server-written identity metadata; never accept a client role or
+    // expose staff demographics in public community profiles.
+    const staffProfile = UpdateStaffProfileBody.safeParse(user.privateMetadata?.bloomStaffProfile);
+    (req as BloomRequest).bloomStaffProfile = staffProfile.success ? staffProfile.data : null;
     next();
   } catch (error) {
     req.log?.error({ err: error }, "Unable to verify Bloom member identity");
@@ -82,6 +88,11 @@ export async function requireBloomProfile(
         .where(eq(bloomAccountsTable.clerkUserId, userId!))
         .limit(1);
       if (!account?.femaleOnlyConfirmed) {
+        const access = await medicalAccessFor(userId!, (req as BloomRequest).bloomEmail!);
+        if (access.isAdmin || access.advisorId !== null) {
+          next();
+          return;
+        }
         res.status(403).json({
           error: "Complete the women-only community confirmation in your profile.",
         });

@@ -211,6 +211,28 @@ paths:
                 $ref: "#/components/schemas/MemberAccount"
         "409":
           description: Username is already taken
+  /staff/profile:
+    put:
+      operationId: updateStaffProfile
+      tags: [bloom]
+      summary: Complete the assigned staff account profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffProfileInput"
+      responses:
+        "200":
+          description: Updated staff account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAccount"
+        "403":
+          description: An assigned staff account is required
   /plans:
     get:
       operationId: listPlans
@@ -792,6 +814,7 @@ components:
         role: { type: string, enum: [member, admin, medical_team] }
         isSuperAdmin: { type: boolean }
         advisorId: { type: ["integer", "null"] }
+        assignedProfileName: { type: ["string", "null"] }
         subscriptionPlan: { type: ["string", "null"], enum: [cycle, pregnancy, null] }
         subscriptionStatus: { type: string, enum: [free, active, expired] }
         subscriptionExpiresAt: { type: ["string", "null"], format: date-time }
@@ -799,6 +822,10 @@ components:
         requestedAt: { type: ["string", "null"], format: date-time }
         subscriptionActive: { type: boolean }
         profileComplete: { type: boolean }
+        staffProfile:
+          anyOf:
+            - $ref: "#/components/schemas/StaffProfileInput"
+            - type: "null"
       required:
         - userId
         - email
@@ -817,6 +844,14 @@ components:
         - requestedAt
         - subscriptionActive
         - profileComplete
+    StaffProfileInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        gender: { type: string, enum: [female, male, other] }
+        age: { type: integer, minimum: 13, maximum: 120 }
+      required: [name, gender, age]
     AccountInput:
       type: object
       properties:

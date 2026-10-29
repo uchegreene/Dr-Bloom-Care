@@ -16,11 +16,27 @@ import { Feather } from "@expo/vector-icons";
 import { useListPlans } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useProfile, type ProfileMode } from "@/hooks/useProfileContext";
+import { StaffOnboarding } from "@/components/StaffOnboarding";
+import { useAuth } from "@clerk/expo";
 
 const money = (amount: number) =>
   `₦${amount.toLocaleString("en-NG")}`;
 
 export default function Onboarding() {
+  const { profile, isLoading, profileError, refreshAccount } = useProfile();
+  const { isLoaded, isSignedIn } = useAuth();
+  const colors = useColors();
+  if (isLoaded && !isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  if (isLoading || !profile) return <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background, padding: 24, gap: 16 }}>
+    {profileError ? <><Text style={{ color: colors.foreground }}>{profileError}</Text>
+      <TouchableOpacity onPress={refreshAccount}><Text style={{ color: colors.primary }}>Retry loading your account</Text></TouchableOpacity></>
+      : <ActivityIndicator color={colors.primary} />}
+  </View>;
+  if (profile.role === "admin" || profile.role === "medical_team") return <StaffOnboarding />;
+  return <MemberOnboarding />;
+}
+
+function MemberOnboarding() {
   const colors = useColors();
   const { completeOnboarding } = useProfile();
   const plansQuery = useListPlans();

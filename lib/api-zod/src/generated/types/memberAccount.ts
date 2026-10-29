@@ -10,6 +10,7 @@ import type { MemberAccountRequestedPlan } from './memberAccountRequestedPlan';
 import type { MemberAccountRole } from './memberAccountRole';
 import type { MemberAccountSubscriptionPlan } from './memberAccountSubscriptionPlan';
 import type { MemberAccountSubscriptionStatus } from './memberAccountSubscriptionStatus';
+import type { StaffProfileInput } from './staffProfileInput';
 
 export interface MemberAccount {
   userId: string;
@@ -28,6 +29,8 @@ export interface MemberAccount {
   /** @nullable */
   advisorId: number | null;
   /** @nullable */
+  assignedProfileName?: string | null;
+  /** @nullable */
   subscriptionPlan: MemberAccountSubscriptionPlan;
   subscriptionStatus: MemberAccountSubscriptionStatus;
   /** @nullable */
@@ -38,4 +41,5 @@ export interface MemberAccount {
   requestedAt: Date | null;
   subscriptionActive: boolean;
   profileComplete: boolean;
+  staffProfile?: StaffProfileInput | null;
 }

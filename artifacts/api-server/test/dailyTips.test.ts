@@ -15,6 +15,7 @@ import { dispatchTipPush } from "../src/jobs/dailyTipPush";
 import { nigeriaDate, publicationTime, eligibleTipPlan, tipDateOffset } from "../src/lib/dailyTipRules";
 import { modelInputs } from "./dailyTipsFixtures";
 import { ensureSuperAdminIdentity } from "../src/lib/superAdminBootstrap";
+import { respondingAdvisor } from "../src/lib/medicalAccess";
 
 test("super-admin bootstrap creates only the configured missing identity and preserves existing passwords", async () => {
   const users = new Map<string, string>();
@@ -160,6 +161,44 @@ test("isolated DB: auth, premium access, review, scheduling, notifications and p
     });
     assert.equal(createdMedical.status, 201);
     assert.equal((await db.select().from(team).where(eq(team.userId, createdMedical.data.userId)))[0].advisorId, unassignedAdvisor.id);
+    const staffDetails = { name: "Assigned Staff Test", gender: "male", age: 37 };
+    assert.equal((await adminApi("PUT", "/staff/profile", undefined, staffDetails)).status, 401);
+    assert.equal((await adminApi("PUT", "/staff/profile", "free", staffDetails)).status, 403);
+    assert.equal((await adminApi("PUT", "/staff/profile", "admin", { ...staffDetails, email: "changed@example.com" })).status, 400);
+    assert.equal((await adminApi("PUT", "/staff/profile", "admin", { ...staffDetails, age: 0 })).status, 400);
+    assert.equal((await adminApi("PUT", "/staff/profile", "admin", { ...staffDetails, age: 37.5 })).status, 400);
+    assert.equal((await adminApi("PUT", "/staff/profile", "admin", { ...staffDetails, gender: "invalid" })).status, 400);
+    // Newly assigned staff need neither patient consent, a handle, nor a birthday.
+    for (const created of [createdStaff, createdMedical]) {
+      const response = await realFetch(`${origin}/staff/profile`, { method: "PUT",
+        headers: { "Content-Type": "application/json", "x-fixture-user": created.data.userId },
+        body: JSON.stringify(staffDetails) });
+      assert.equal(response.status, 200);
+      const saved = await response.json();
+      assert.equal(saved.profileComplete, true);
+      assert.deepEqual(saved.staffProfile, staffDetails);
+      assert.equal(saved.email, created.data.email);
+      assert.equal(saved.femaleOnlyConfirmed, false);
+      assert.equal(saved.dateOfBirth, null);
+      assert.equal(saved.username, null);
+      assert.equal(saved.subscriptionActive, false);
+      assert.equal(saved.assignedProfileName, created === createdMedical ? unassignedAdvisor.name : null);
+      const reloaded = await realFetch(`${origin}/account`, { headers: { "x-fixture-user": created.data.userId } });
+      const reloadedAccount = await reloaded.json();
+      assert.deepEqual(reloadedAccount.staffProfile, staffDetails);
+      assert.equal(reloadedAccount.assignedProfileName, saved.assignedProfileName);
+    }
+    const professional = { bloomUserId: createdMedical.data.userId, bloomEmail: createdMedical.data.email } as any;
+    assert.equal((await respondingAdvisor(professional)).name, unassignedAdvisor.name);
+    await assert.rejects(respondingAdvisor(professional, advisor.id), /own authorized professional profile/);
+    const renameAttempt = await realFetch(`${origin}/staff/profile`, { method: "PUT",
+      headers: { "Content-Type": "application/json", "x-fixture-user": createdMedical.data.userId },
+      body: JSON.stringify({ ...staffDetails, assignedProfileName: "Unassigned identity" }) });
+    assert.equal(renameAttempt.status, 400);
+    const superProfile = await adminApi("PUT", "/staff/profile", "admin", staffDetails);
+    assert.equal(superProfile.status, 200);
+    assert.equal(superProfile.data.isSuperAdmin, true);
+    assert.deepEqual((await adminApi("GET", "/account", "free")).data.staffProfile, null);
     assert.equal((await adminApi("PUT", `/admin/assignments/${user("free")}`, "cycle", { active: true })).status, 403);
     assert.equal((await adminApi("PUT", `/admin/assignments/${user("cycle")}`, "admin", { active: false })).status, 200);
     assert.equal((await adminApi("GET", "/admin/members", "cycle")).status, 403);
