@@ -25,6 +25,7 @@ import {
   type BloomRequest,
 } from "../middlewares/bloomAuth";
 import { clerkClient } from "@clerk/express";
+import { isValidDateOfBirth } from "../lib/calendarDates";
 import staffAccountsRouter from "./staffAccounts";
 import { UpdateStaffProfileBody } from "@workspace/api-zod";
 
@@ -141,6 +142,10 @@ router.put("/staff/profile", requireBloomMember, async (req, res) => {
 });
 
 router.put("/account", requireBloomMember, async (req, res) => {
+  if (!isValidDateOfBirth(req.body?.dateOfBirth)) {
+    res.status(400).json({ error: "Enter a real date of birth in YYYY-MM-DD format. Members must be aged 13–120." });
+    return;
+  }
   const parsed = UpdateAccountBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Check your profile details." });

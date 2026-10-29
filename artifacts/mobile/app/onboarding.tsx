@@ -19,6 +19,7 @@ import { useProfile, type ProfileMode } from "@/hooks/useProfileContext";
 import { StaffOnboarding } from "@/components/StaffOnboarding";
 import { useAuth } from "@clerk/expo";
 import { DateInput } from "@/components/DateInput";
+import { isValidCalendarDate } from "@/lib/dateInput";
 
 const money = (amount: number) =>
   `₦${amount.toLocaleString("en-NG")}`;
@@ -34,6 +35,7 @@ export default function Onboarding() {
       : <ActivityIndicator color={colors.primary} />}
   </View>;
   if (profile.role === "admin" || profile.role === "medical_team") return <StaffOnboarding />;
+  if (profile.profileComplete) return <Redirect href="/" />;
   return <MemberOnboarding />;
 }
 
@@ -48,9 +50,6 @@ function MemberOnboarding() {
   const [femaleOnlyConfirmed, setFemaleOnlyConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [done, setDone] = useState(false);
-
-  if (done) return <Redirect href="/" />;
 
   const plan = mode === "pregnant" ? "pregnancy" : "cycle";
   const price = plansQuery.data?.find((entry) => entry.plan === plan)?.priceNaira;
@@ -66,7 +65,7 @@ function MemberOnboarding() {
     if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanedUsername)) {
       return setError("Username must be 3–30 letters, numbers, or underscores.");
     }
-    if (!isValid(parsedDate) || isFuture(parsedDate)) {
+    if (!isValidCalendarDate(dob.trim()) || !isValid(parsedDate) || isFuture(parsedDate)) {
       return setError("Enter your date of birth as YYYY-MM-DD.");
     }
     const age = differenceInYears(new Date(), parsedDate);
@@ -84,7 +83,6 @@ function MemberOnboarding() {
         femaleOnlyConfirmed: true,
         mode,
       });
-      setDone(true);
     } catch (cause) {
       const status = (cause as { status?: number }).status;
       setError(

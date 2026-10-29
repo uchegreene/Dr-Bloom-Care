@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useAuth } from "@clerk/expo";
 import { AppState } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { paidAccessAt } from "@/lib/subscriptionAccess";
 import {
   useGetAccount,
@@ -86,6 +87,7 @@ function mapAccount(account: MemberAccount): Profile {
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, userId } = useAuth();
+  const queryClient = useQueryClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const accountQuery = useGetAccount({
     query: {
@@ -144,6 +146,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         | "mode"
       >,
     ) => {
+      // Prevent an older incomplete-account response from winning the save.
+      await queryClient.cancelQueries({ queryKey: ["/account", userId] });
       const result = await updateAccount.mutateAsync({
         data: {
           username: value.username.trim(),
@@ -154,10 +158,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           mode: value.mode,
         },
       });
+      queryClient.setQueryData(["/account", userId], result);
       setProfile(mapAccount(result));
       return result;
     },
-    [updateAccount],
+    [updateAccount, queryClient, userId],
   );
 
   const updateProfile = useCallback(
