@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { DateInput } from '@/components/DateInput';
 import { Image } from 'expo-image';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,14 +77,13 @@ export default function PregnancyScreen() {
             Enter the first day of your last period to calculate your estimated due date.
           </Text>
           
-          <TextInput
+          <DateInput
             style={[styles.input, { color: colors.foreground, borderColor: dateError ? colors.primary : colors.border, backgroundColor: colors.card }]}
             placeholder="YYYY-MM-DD"
             placeholderTextColor={colors.mutedForeground}
             value={lmpInput}
+            accessibilityLabel="First day of your last period"
             onChangeText={(t) => { setLmpInput(t); if (dateError) setDateError(''); }}
-            keyboardType="numbers-and-punctuation"
-            autoCapitalize="none"
           />
 
           {!!dateError && (

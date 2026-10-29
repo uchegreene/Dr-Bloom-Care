@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DateInput } from '@/components/DateInput';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Modal, ActivityIndicator, Linking } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
@@ -280,7 +281,7 @@ export default function RemindersScreen() {
               <>
                 <Text style={[styles.label, { color: colors.foreground }]}>Local date and time</Text>
                 <View style={styles.row}>
-                  <TextInput style={[...input, { flex: 1.3 }]} placeholder="YYYY-MM-DD" placeholderTextColor={colors.mutedForeground} value={dateStr} onChangeText={t => { setDateStr(t); setError(''); }} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
+                  <DateInput accessibilityLabel="Appointment date" style={[...input, { flex: 1.3 }]} placeholderTextColor={colors.mutedForeground} value={dateStr} onChangeText={t => { setDateStr(t); setError(''); }} />
                   <TextInput style={[...input, { flex: 1 }]} placeholder="HH:mm" placeholderTextColor={colors.mutedForeground} value={timeStr} onChangeText={t => { setTimeStr(t); setError(''); }} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
                 </View>
                 <Text style={[styles.small, { color: colors.mutedForeground }]}>24-hour time. You are alerted at the appointment time, plus an earlier alert if chosen. A past date is saved as history with no alert.</Text>

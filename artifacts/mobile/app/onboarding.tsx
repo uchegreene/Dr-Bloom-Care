@@ -18,6 +18,7 @@ import { useColors } from "@/hooks/useColors";
 import { useProfile, type ProfileMode } from "@/hooks/useProfileContext";
 import { StaffOnboarding } from "@/components/StaffOnboarding";
 import { useAuth } from "@clerk/expo";
+import { DateInput } from "@/components/DateInput";
 
 const money = (amount: number) =>
   `₦${amount.toLocaleString("en-NG")}`;
@@ -156,12 +157,12 @@ function MemberOnboarding() {
           style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
         />
         <Text style={[styles.label, { color: colors.foreground }]}>Date of birth</Text>
-        <TextInput
+        <DateInput
           value={dob}
           onChangeText={(value) => { setDob(value); setError(""); }}
+          accessibilityLabel="Date of birth"
           placeholder="YYYY-MM-DD"
           placeholderTextColor={colors.mutedForeground}
-          keyboardType="numbers-and-punctuation"
           style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
         />
 

@@ -1,5 +1,6 @@
 - [Expo context files need .tsx](expo-jsx-context-files.md) — hook/context files that render a JSX Provider must be `.tsx`, not `.ts`, or tsc fails to parse.
 - [Cycle period-start anchoring](cycle-period-anchor.md) — phase/prediction math anchors on the START of the latest consecutive flow run, never the latest logged flow day.
+- [Date entry](date-entry-policy.md) — automatically insert YYYY-MM-DD separators in all typed date fields, including pregnancy, last-period and appointment dates.
 - [Expo native-tabs break navigation](expo-native-tabs-instability.md) — never use unstable-native-tabs; dynamic/missing triggers kill tab nav on iOS 26. Use classic Tabs + href:null.
 - [Onboarding taps and navigation](expo-keyboard-button-placement.md) — keep buttons inside the ScrollView with handled taps; declarative redirects avoid device-only navigation failures.
 - [Membership policy](membership-policy.md) — free read-only accounts, visible social navigation, isolated demos, automatic verified-payment activation/expiry, and explicit admin authorization.
